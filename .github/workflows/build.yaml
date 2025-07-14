@@ -8,7 +8,7 @@ on:
     branches:
       - main
 env:
-  PROJECT_NAME: Arcane.Stream.MicrosoftSynapseLink
+  PROJECT_NAME: Arcane.Stream.Parquet
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 

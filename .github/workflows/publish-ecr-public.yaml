@@ -1,5 +1,5 @@
-name: Publish Arcane.Stream.MicrosoftSynapseLink to ECR public registry
-run-name: Publish Arcane.Stream.MicrosoftSynapseLink to public.ecr.aws by @${{ github.actor }}
+name: Publish Arcane.Stream.Parquet to ECR public registry
+run-name: Publish Arcane.Stream.Parquet to public.ecr.aws by @${{ github.actor }}
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
         default: "current"
 
 env:
-  PROJECT_NAME: Arcane.Stream.MicrosoftSynapseLink
+  PROJECT_NAME: Arcane.Stream.Parquet
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 

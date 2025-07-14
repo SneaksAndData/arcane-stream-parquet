@@ -14,4 +14,4 @@ COPY --from=build /build/target/scala-3.6.1 /app
 
 WORKDIR /app
 
-CMD ["com.sneaksanddata.arcane.microsoft-synapse-link.assembly.jar"]
+CMD ["com.sneaksanddata.arcane.stream-parquet.assembly.jar"]

@@ -1,6 +1,6 @@
 <configuration>
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>tmp/synapse-link.log</file>
+        <file>tmp/parquet-stream.log</file>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <customFields>
                 {

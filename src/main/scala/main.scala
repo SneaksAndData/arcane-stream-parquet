@@ -51,7 +51,7 @@ object main extends ZIOAppDefault {
     UpsertBlobBackfillOverwriteBatchFactory.layer,
     BlobListingParquetSource.layer,
     BlobSourceDataProvider.layer,
-    //MicrosoftSynapseLinkStreamContext.layer,
+    //StreamContext.layer,
     IcebergS3CatalogWriter.layer,
     JdbcMergeServiceClient.layer,
     UpsertBlobHookManager.layer,

@@ -1,5 +1,5 @@
 name: Build Container Image
-run-name: Build Arcane.Stream.MicrosoftSynapseLink Image for GHCR from ${{ github.ref }} by @${{ github.actor }}
+run-name: Build Arcane.Stream.Parquet Image for GHCR from ${{ github.ref }} by @${{ github.actor }}
 
 on: workflow_dispatch
 
@@ -65,7 +65,7 @@ jobs:
       - name: Build and Push Chart
         uses: SneaksAndData/github-actions/build_helm_chart@v0.1.9
         with:
-          application: arcane-stream-microsoft-synapse-link
+          application: arcane-stream-parquet
           app_version: ${{ steps.meta.outputs.version }}
           container_registry_user: ${{ github.actor }}
           container_registry_token: ${{ secrets.GITHUB_TOKEN }}
