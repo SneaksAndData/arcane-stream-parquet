@@ -46,19 +46,24 @@ case class SinkSettings(
 ) derives ReadWriter
 
 case class S3Settings(
-                       usePathStyle: Boolean,
-                       region: String,
-                       endpoint: String,
-                       maxResultsPerPage: Int,
-                       retryMaxAttempts: Int,
-                       retryBaseDelay: Double,
-                       retryMaxDelay: Double
-                     ) derives ReadWriter
-
+    usePathStyle: Boolean,
+    region: String,
+    endpoint: String,
+    maxResultsPerPage: Int,
+    retryMaxAttempts: Int,
+    retryBaseDelay: Double,
+    retryMaxDelay: Double
+) derives ReadWriter
 
 /** The configuration of the stream source.
   */
-case class SourceSettings(changeCaptureIntervalSeconds: Int, baseLocation: String, tempPath: String, primaryKeys: List[String], s3: S3Settings) derives ReadWriter
+case class SourceSettings(
+    changeCaptureIntervalSeconds: Int,
+    baseLocation: String,
+    tempPath: String,
+    primaryKeys: List[String],
+    s3: S3Settings
+) derives ReadWriter
 
 case class TablePropertiesSettings(
     partitionExpressions: Array[String],
