@@ -29,7 +29,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |    "kind": "StreamingJobTemplate",
        |    "name": "arcane-stream-parquet-standard-job"
        |  },
-       |  "lookBackInterval": 7200,
+       |  "lookBackInterval": 300,
        |  "tableProperties": {
        |    "partitionExpressions": [],
        |    "format": "PARQUET",
@@ -105,12 +105,23 @@ object IntegrationTests extends ZIOSpecDefault:
         _              <- ZIO.attempt(Fixtures.clearTarget(targetTableName))
         backfillRunner <- Common.buildTestApp(TimeLimitLifetimeService.layer, backfillStreamContextLayer).fork
         _ <- Common.waitForData(
-          streamingStreamContext.targetTableFullName,
+          backfillStreamContext.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder,
           100 // col0 only have 100 unique values, thus we expect 100 rows total
         )
         _ <- backfillRunner.await.timeout(Duration.ofSeconds(10))
       yield assertTrue(true)
+    },
+    test("runs stream correctly") {
+      for
+        streamRunner <- Common.buildTestApp(TimeLimitLifetimeService.layer, streamingStreamContextLayer).fork
+        rows <- Common.getData(
+          streamingStreamContext.targetTableFullName,
+          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
+          Common.TargetDecoder
+        )
+        _ <- streamRunner.await.timeout(Duration.ofSeconds(10))
+      yield assertTrue(rows.size == 100) // no new rows added after stream has started
     }
-  ) @@ timeout(zio.Duration.fromSeconds(60)) @@ TestAspect.withLiveClock
+  ) @@ timeout(zio.Duration.fromSeconds(60)) @@ TestAspect.withLiveClock @@ TestAspect.sequential
