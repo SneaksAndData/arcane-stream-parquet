@@ -36,6 +36,8 @@ lazy val plugin = (project in file("."))
       // Test dependencies
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
     libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.19" % Test,
+    libraryDependencies += "dev.zio" %% "zio-test"          % "2.1.19" % Test,
+    libraryDependencies += "dev.zio" %% "zio-test-sbt"      % "2.1.19" % Test,
 
     graalVMNativeImageOptions ++= Seq(
       "--no-fallback",
