@@ -41,7 +41,7 @@ import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
 import scala.util.Try
 
-/** The context for the SQL Server Change Tracking stream.
+/** The context for the UpsertBlob Parquet stream.
   *
   * @param spec
   *   The stream specification
@@ -171,10 +171,10 @@ given Conversion[UpsertBlobStreamContext, MetricsConfig] with
 
 object UpsertBlobStreamContext:
 
-  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings &
-    IcebergCatalogSettings & JdbcMergeServiceClientSettings & TargetTableSettings & UpsertBlobStreamContext &
-    TablePropertiesSettings & FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & BlobSourceSettings &
-    SourceBufferingSettings & MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
+  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings & IcebergCatalogSettings &
+    JdbcMergeServiceClientSettings & TargetTableSettings & UpsertBlobStreamContext & TablePropertiesSettings &
+    FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & BlobSourceSettings & SourceBufferingSettings &
+    MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
 
   /** The ZLayer that creates the VersionedDataGraphBuilder.
     */

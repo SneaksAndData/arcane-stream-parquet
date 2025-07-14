@@ -116,3 +116,6 @@ object StreamSpec:
 
   def fromEnvironment(envVarName: String): Option[StreamSpec] =
     sys.env.get(envVarName).map(env => read[StreamSpec](env))
+
+  def fromString(source: String): StreamSpec =
+    read[StreamSpec](source)
