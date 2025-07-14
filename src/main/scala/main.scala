@@ -46,7 +46,7 @@ object main extends ZIOAppDefault {
 
   override val bootstrap: ZLayer[Any, Nothing, Unit] = Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
-  private val appLayer: ZIO[StreamRunnerService, Throwable, Unit] = for
+  val appLayer: ZIO[StreamRunnerService, Throwable, Unit] = for
     _            <- zlog("Application starting")
     streamRunner <- ZIO.service[StreamRunnerService]
     _            <- streamRunner.run

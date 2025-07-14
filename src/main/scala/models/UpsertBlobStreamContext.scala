@@ -171,7 +171,7 @@ given Conversion[UpsertBlobStreamContext, MetricsConfig] with
 
 object UpsertBlobStreamContext:
 
-  private type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings &
+  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings &
     IcebergCatalogSettings & JdbcMergeServiceClientSettings & TargetTableSettings & UpsertBlobStreamContext &
     TablePropertiesSettings & FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & BlobSourceSettings &
     SourceBufferingSettings & MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
