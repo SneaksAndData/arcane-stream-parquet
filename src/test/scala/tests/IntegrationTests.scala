@@ -12,7 +12,6 @@ import zio.{Scope, ULayer, ZIO, ZLayer}
 import java.time.Duration
 
 object IntegrationTests extends ZIOSpecDefault:
-  val sourceTableName = "StreamRunner"
   val targetTableName = "iceberg.test.stream_run"
 
   private val streamContextStr =
@@ -51,7 +50,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "batchThreshold": 60,
        |      "retentionThreshold": "6h"
        |    },
-       |    "targetTableName": "iceberg.test.parquet_test"
+       |    "targetTableName": "$targetTableName"
        |  },
        |  "sourceSettings": {
        |    "changeCaptureIntervalSeconds": 5,
@@ -62,7 +61,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "usePathStyle": true,
        |      "region": "us-east-1",
        |      "endpoint": "http://localhost:9000",
-       |      "maxResultsPerPage": 100,
+       |      "maxResultsPerPage": 150,
        |      "retryMaxAttempts": 5,
        |      "retryBaseDelay": 0.1,
        |      "retryMaxDelay": 1
@@ -104,12 +103,12 @@ object IntegrationTests extends ZIOSpecDefault:
     test("runs backfill") {
       for
         _              <- ZIO.attempt(Fixtures.clearTarget(targetTableName))
-        backfillRunner <- Common.buildTestApp(TimeLimitLifetimeService.layer, streamingStreamContextLayer).fork
+        backfillRunner <- Common.buildTestApp(TimeLimitLifetimeService.layer, backfillStreamContextLayer).fork
         _ <- Common.waitForData(
           streamingStreamContext.targetTableFullName,
-          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9",
+          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder,
-          5000
+          100 // col0 only have 100 unique values, thus we expect 100 rows total
         )
         _ <- backfillRunner.await.timeout(Duration.ofSeconds(10))
       yield assertTrue(true)

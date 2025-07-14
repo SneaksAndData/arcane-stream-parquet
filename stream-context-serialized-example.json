@@ -42,7 +42,7 @@
       "usePathStyle": true,
       "region": "us-east-1",
       "endpoint": "http://localhost:9000",
-      "maxResultsPerPage": 100,
+      "maxResultsPerPage": 1000,
       "retryMaxAttempts": 5,
       "retryBaseDelay": 0.1,
       "retryMaxDelay": 1
