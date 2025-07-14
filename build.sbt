@@ -25,7 +25,7 @@ lazy val plugin = (project in file("."))
     name := "arcane-stream-parquet",
     idePackagePrefix := Some("com.sneaksanddata.arcane.stream_parquet"),
 
-    libraryDependencies += "com.sneaksanddata" % "arcane-framework_3" % "1.0.3-13-g5afffce",
+    libraryDependencies += "com.sneaksanddata" % "arcane-framework_3" % "1.1.0",
     libraryDependencies += "io.netty" % "netty-tcnative-boringssl-static" % "2.0.65.Final",
 
     // bugfix for upgrade header
@@ -36,6 +36,8 @@ lazy val plugin = (project in file("."))
       // Test dependencies
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
     libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.19" % Test,
+    libraryDependencies += "dev.zio" %% "zio-test"          % "2.1.19" % Test,
+    libraryDependencies += "dev.zio" %% "zio-test-sbt"      % "2.1.19" % Test,
 
     graalVMNativeImageOptions ++= Seq(
       "--no-fallback",
@@ -77,8 +79,9 @@ lazy val plugin = (project in file("."))
       case ps if ps.endsWith("module-info.class") => MergeStrategy.discard
       case ps if ps.endsWith("package-info.class") => MergeStrategy.discard
 
-      // for javax.activation package take the first one
+      // for javax/activation and javax/xml package take the first one
       case PathList("javax", "activation", _*) => MergeStrategy.last
+      case PathList("javax", "xml", _*) => MergeStrategy.last
 
       // For other files we use the default strategy (deduplicate)
       case x => MergeStrategy.deduplicate
