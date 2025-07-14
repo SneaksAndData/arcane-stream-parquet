@@ -1,0 +1,20 @@
+apiVersion: streaming.sneaksanddata.com/v1beta1
+kind: StreamClass
+metadata:
+  name: {{ template "app.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "streamclass.labels" $ | nindent 4 }}
+    {{- if .Values.additionalAnnotations }}
+  annotations:
+    {{- with .Values.additionalAnnotations }}
+      {{- toYaml . | nindent 4 }}
+      {{- end }}
+  {{- end }}
+spec:
+  apiGroupRef: streaming.sneaksanddata.com
+  kindRef: ParquetStream
+  apiVersion: v1beta1
+  pluralName: parquet-streams
+  secretRefs:
+    - streamConfigurationSecretRef

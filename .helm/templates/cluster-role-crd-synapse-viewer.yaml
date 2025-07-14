@@ -1,0 +1,27 @@
+{{- if .Values.rbac.clusterRole.parquetStreamViewer.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "app.clusterRole.parquetStreamViewer" . }}
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    {{- include "app.labels" $ | nindent 4 }}
+    {{- with .Values.rbac.clusterRole.parquetStreamViewer.additionalLabels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.rbac.clusterRole.parquetStreamViewer.additionalAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+rules:
+  - verbs:
+      - get
+      - list
+      - watch
+    apiGroups:
+      - streaming.sneaksanddata.com
+    resources:
+      - parquet-streams
+      - parquet-streams/status
+{{- end }}

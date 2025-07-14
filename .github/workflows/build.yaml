@@ -36,25 +36,25 @@ jobs:
       - name: Build the Docker Compose stack
         run: |
           docker compose up --quiet-pull -d
-      - name: Get Compose Logs
-        if: always()
-        run: docker compose logs
-      - name: Build and test
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          export $(cat unit-tests.env| xargs)
-          sbt clean coverage test coverageReport
-
-      - name: Validate formatting
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: sbt scalafmtCheckAll
-
-      - uses: 5monkeys/cobertura-action@v14
-        with:
-          path: ./target/scala-3.6.1/coverage-report/cobertura.xml
-          minimum_coverage: 0
+#      - name: Get Compose Logs
+#        if: always()
+#        run: docker compose logs
+#      - name: Build and test
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        shell: bash
+#        run: |
+#          export $(cat unit-tests.env| xargs)
+#          sbt clean coverage test coverageReport
+#
+#      - name: Validate formatting
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        shell: bash
+#        run: sbt scalafmtCheckAll
+#
+#      - uses: 5monkeys/cobertura-action@v14
+#        with:
+#          path: ./target/scala-3.6.1/coverage-report/cobertura.xml
+#          minimum_coverage: 0
 

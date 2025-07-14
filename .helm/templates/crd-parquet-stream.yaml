@@ -1,0 +1,306 @@
+{{- if .Values.customResourceDefinitions.create }}
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: parquet-streams.streaming.sneaksanddata.com
+spec:
+  group: streaming.sneaksanddata.com
+  scope: Namespaced
+  names:
+    plural: parquet-streams
+    singular: parquet-stream
+    kind: ParquetStream
+    shortNames:
+      - pstream
+  versions:
+    - name: v1beta1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Source location
+          type: string
+          jsonPath: .spec.sourceSettings.baseLocation
+        - name: Refresh Interval
+          type: string
+          jsonPath: .spec.sourceSettings.changeCaptureIntervalSeconds
+        - name: Sink location
+          type: string
+          jsonPath: .spec.sinkSettings.targetTableName
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                tableProperties:
+                  type: object
+                  default:
+                    partitionExpressions: []
+                    sortedBy: []
+                    parquetBloomFilterColumns: []
+                    format: PARQUET
+                  properties:
+                    partitionExpressions:
+                      type: array
+                      items:
+                        type: string
+                      default: []
+                    sortedBy:
+                      type: array
+                      items:
+                        type: string
+                      default: [ ]
+                    parquetBloomFilterColumns:
+                      type: array
+                      items:
+                        type: string
+                      default: [ ]
+                    format:
+                      type: string
+                      enum:
+                        - PARQUET
+                        - ORC
+                        - AVRO
+                      default: PARQUET
+                sourceSettings:
+                  type: object
+                  properties:
+                    changeCaptureIntervalSeconds:
+                      type: integer
+                      description: How long to wait before polling for next result set. Can be from 1 to 1 hour.
+                      minimum: 1
+                      maximum: 3600
+                    baseLocation:
+                      type: string
+                      description: Location root for Parquet files in a form of HDFS address s3a://, abfss:// etc.
+                    metastore:
+                      type: object
+                      default: null
+                      properties:
+                        schemaName:
+                          type: string
+                          description: Schema where the metastore table is located
+                        tableName:
+                          type: string
+                          description: Name of the metastore table
+                    s3:
+                      type: object
+                      properties:
+                        usePathStyle:
+                          type: boolean
+                          default: false
+                        region:
+                          type: string
+                          default: us-east-1
+                        endpoint:
+                          type: string
+                          default: s3.amazonaws.com
+                        maxResultsPerPage:
+                          type: integer
+                          default: 1000
+                          minimum: 1
+                          maximum: 1000
+                        retryMaxAttempts:
+                          type: integer
+                          default: 5
+                          minimum: 1
+                          maximum: 10
+                        retryBaseDelay:
+                          type: number
+                          default: 0.1
+                          minimum: 0.1
+                          maximum: 1
+                        retryMaxDelay:
+                          type: number
+                          default: 1
+                          minimum: 0.2
+                          maximum: 2
+                streamConfigurationSecretRef:
+                  description: |
+                    Name of the secret containing the stream configuration credentials. Must contain a ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI key
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                jobTemplateRef:
+                  description: |
+                    Name of the job template to be used for the streaming job if stream is running in normal mode.
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    kind:
+                      type: string
+                    apiGroup:
+                      type: string
+                backfillJobTemplateRef:
+                  description: |
+                    Name of the job template to be used for the streaming job if stream is running in the backfill mode.
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    kind:
+                      type: string
+                    apiGroup:
+                      type: string
+                rowsPerGroup:
+                  type: integer
+                  description: Number of rows per parquet rowgroup.
+                groupingIntervalSeconds:
+                  type: integer
+                  description: Max time to wait for rowsPerGroup to accumulate. Can be from 1 to 60 seconds.
+                  minimum: 1
+                  maximum: 60
+                sinkSettings:
+                  type: object
+                  properties:
+                    optimizeSettings:
+                      type: object
+                      description: Optimization settings for Iceberg tables.
+                      properties:
+                        batchThreshold:
+                          type: integer
+                          default: 60
+                          description: Number of batches to accumulate before running the optimization query.
+                        fileSizeThreshold:
+                          type: string
+                          default: 100MB
+                          description: File size to target for the optimization query.
+                      default:
+                        batchThreshold: 60
+                        fileSizeThreshold: 100MB
+                    snapshotExpirationSettings:
+                      type: object
+                      description: Expiration query configuration for Iceberg tables.
+                      properties:
+                        batchThreshold:
+                          type: integer
+                          default: 60
+                          description: Number of batches to accumulate before running the snapshot expiration query.
+                        retentionThreshold:
+                          type: string
+                          default: 6h
+                          description: File retention period.
+                      default:
+                        batchThreshold: 60
+                        retentionThreshold: 6h
+                    orphanFilesExpirationSettings:
+                      type: object
+                      description: Orphan files cleanup settings.
+                      properties:
+                        batchThreshold:
+                          type: integer
+                          default: 60
+                          description: Number of batches to accumulate before running the expire orphan files query.
+                        retentionThreshold:
+                          type: string
+                          default: 6h
+                          description: File retention period.
+                      default:
+                        batchThreshold: 60
+                        retentionThreshold: 6h
+                    targetTableName:
+                      type: string
+                      description: Name for the target Iceberg table.
+                lookBackInterval:
+                  type: integer
+                  description: |
+                    Number of seconds to look back when determining first set of changes to extract.
+                    Can be set in interval from 1 second to 10 hours. Default is 1 hour.
+                  minimum: 1
+                  maximum: 1209600
+                  default: 3600
+                stagingDataSettings:
+                  type: object
+                  properties:
+                    maxRowsPerFile:
+                      type: integer
+                      default: 10000
+                    dataLocation:
+                      type: string
+                    tableNamePrefix:
+                      type: string
+                    catalog:
+                      type: object
+                      properties:
+                        catalogName:
+                          type: string
+                        schemaName:
+                          type: string
+                        namespace:
+                          type: string
+                        warehouse:
+                          type: string
+                        catalogUri:
+                          type: string
+                backfillBehavior:
+                  type: string
+                  enum:
+                    - merge
+                    - overwrite
+                  default:
+                    overwrite
+                fieldSelectionRule:
+                  type: object
+                  properties:
+                    ruleType:
+                      type: string
+                      enum:
+                        - include
+                        - exclude
+                        - all
+                    fields:
+                      type: array
+                      items:
+                        type: string
+                  default:
+                    ruleType: all
+                    fields: []
+                backfillStartDate:
+                  description: |
+                    The date and time to start backfilling data from.
+                    The date should be a valid Epoch timestamp in seconds
+                  type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - RESTARTING
+                    - RUNNING
+                    - RELOADING
+                    - TERMINATING
+                    - STOPPED
+                    - SUSPENDED
+                    - FAILED
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - status
+                      - type
+                    properties:
+                      message:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - WARNING
+                          - ERROR
+                          - INFO
+                          - READY
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+  {{- end }}
