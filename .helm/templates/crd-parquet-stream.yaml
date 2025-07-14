@@ -79,6 +79,14 @@ spec:
                     baseLocation:
                       type: string
                       description: Location root for Parquet files in a form of HDFS address s3a://, abfss:// etc.
+                    tempPath:
+                      type: string
+                      description: Location to store temporary files
+                      default: /tmp/parquet-stream
+                    primaryKeys:
+                      type: array
+                      items:
+                        type: string
                     metastore:
                       type: object
                       default: null
