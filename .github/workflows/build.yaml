@@ -44,7 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          export $(cat integration-tests.env| xargs)
+          export $(cat integration-tests.env | xargs)
           sbt clean coverage test coverageReport
 
       - name: Validate formatting
