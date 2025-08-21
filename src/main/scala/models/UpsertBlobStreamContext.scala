@@ -149,7 +149,7 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
   override val bufferingEnabled: Boolean            = false
   override val bufferingStrategy: BufferingStrategy = BufferingStrategy.Buffering(0)
 
-  override val isUnifiedSchema: Boolean  = false
+  override val isUnifiedSchema: Boolean  = true
   override val isServerSide: Boolean     = false
   override val sourcePath: String        = spec.sourceSettings.baseLocation
   override val tempStoragePath: String   = spec.sourceSettings.tempPath
