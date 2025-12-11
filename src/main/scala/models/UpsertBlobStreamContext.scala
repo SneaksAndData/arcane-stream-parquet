@@ -5,10 +5,11 @@ import models.app.StreamSpec
 
 import com.sneaksanddata.arcane.framework.models.app.StreamContext
 import com.sneaksanddata.arcane.framework.models.settings
+import com.sneaksanddata.arcane.framework.models.settings.blob.ParquetBlobSourceSettings
 import com.sneaksanddata.arcane.framework.models.settings.{
+  AnalyzeSettings,
   BackfillBehavior,
   BackfillSettings,
-  BlobSourceSettings,
   BufferingStrategy,
   FieldSelectionRule,
   FieldSelectionRuleSettings,
@@ -57,7 +58,7 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
     with FieldSelectionRuleSettings
     with BackfillSettings
     with StagingDataSettings
-    with BlobSourceSettings
+    with ParquetBlobSourceSettings
     with SourceBufferingSettings:
 
   override val rowsPerGroup: Int =
@@ -100,6 +101,13 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
         override val batchThreshold: Int        = spec.sinkSettings.orphanFilesExpirationSettings.batchThreshold
         override val retentionThreshold: String = spec.sinkSettings.orphanFilesExpirationSettings.retentionThreshold
 
+      }
+    )
+
+    override val targetAnalyzeSettings: Option[AnalyzeSettings] = Some(
+      new AnalyzeSettings {
+        override val batchThreshold: Int          = spec.sinkSettings.analyzeSettings.batchThreshold
+        override val includedColumns: Seq[String] = spec.sinkSettings.analyzeSettings.includedColumns
       }
     )
 
@@ -173,8 +181,8 @@ object UpsertBlobStreamContext:
 
   type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings & IcebergCatalogSettings &
     JdbcMergeServiceClientSettings & TargetTableSettings & UpsertBlobStreamContext & TablePropertiesSettings &
-    FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & BlobSourceSettings & SourceBufferingSettings &
-    MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
+    FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & ParquetBlobSourceSettings &
+    SourceBufferingSettings & MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
 
   /** The ZLayer that creates the VersionedDataGraphBuilder.
     */
