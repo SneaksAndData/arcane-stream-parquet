@@ -25,7 +25,7 @@ lazy val plugin = (project in file("."))
     name := "arcane-stream-parquet",
     idePackagePrefix := Some("com.sneaksanddata.arcane.stream_parquet"),
 
-    libraryDependencies += "com.sneaksanddata" % "arcane-framework_3" % "1.2.3",
+    libraryDependencies += "com.sneaksanddata" % "arcane-framework_3" % "1.2.3-15-g86dfd5a",
     libraryDependencies += "io.netty" % "netty-tcnative-boringssl-static" % "2.0.65.Final",
 
     // bugfix for upgrade header
@@ -36,8 +36,8 @@ lazy val plugin = (project in file("."))
       // Test dependencies
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test,
     libraryDependencies += "org.scalatest" %% "scalatest-flatspec" % "3.2.19" % Test,
-    libraryDependencies += "dev.zio" %% "zio-test"          % "2.1.19" % Test,
-    libraryDependencies += "dev.zio" %% "zio-test-sbt"      % "2.1.19" % Test,
+    libraryDependencies += "dev.zio" %% "zio-test"          % "2.1.24" % Test,
+    libraryDependencies += "dev.zio" %% "zio-test-sbt"      % "2.1.24" % Test,
 
     graalVMNativeImageOptions ++= Seq(
       "--no-fallback",

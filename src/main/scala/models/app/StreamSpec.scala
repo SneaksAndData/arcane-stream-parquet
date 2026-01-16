@@ -67,7 +67,8 @@ case class SourceSettings(
     baseLocation: String,
     tempPath: String,
     primaryKeys: List[String],
-    s3: S3Settings
+    s3: S3Settings,
+    useNameMapping: Boolean
 ) derives ReadWriter
 
 case class TablePropertiesSettings(
