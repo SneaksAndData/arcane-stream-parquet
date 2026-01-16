@@ -1,5 +1,5 @@
 ## Parquet Stream Plugin for Arcane
-This repository contains implementations a Parquet-Iceberg streaming plugin for Arcane. Use this app to livestream Parquet files to an Iceberg tables, backed by Trino as streaming batch merge consumer.
+This repository contains implementation of a Parquet-Iceberg streaming plugin for Arcane. Use this app to livestream Parquet files to an Iceberg table, backed by [Trino](https://github.com/trinodb/trino) as a streaming batch merge consumer and [Lakekeeper](https://github.com/lakekeeper/lakekeeper) as a data catalog.
 
 ### Quickstart
 
