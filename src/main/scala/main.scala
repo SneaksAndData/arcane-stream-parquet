@@ -2,7 +2,7 @@ package com.sneaksanddata.arcane.stream_parquet
 
 import models.{S3Reader, UpsertBlobStreamContext}
 
-import com.sneaksanddata.arcane.framework.excpetions.StreamFailException
+import com.sneaksanddata.arcane.framework.exceptions.StreamFailException
 import com.sneaksanddata.arcane.framework.logging.ZIOLogAnnotations.zlog
 import com.sneaksanddata.arcane.framework.services.app.base.StreamRunnerService
 import com.sneaksanddata.arcane.framework.services.app.{GenericStreamRunnerService, PosixStreamLifetimeService}
