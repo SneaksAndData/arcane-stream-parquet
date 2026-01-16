@@ -162,6 +162,7 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
   override val sourcePath: String        = spec.sourceSettings.baseLocation
   override val tempStoragePath: String   = spec.sourceSettings.tempPath
   override val primaryKeys: List[String] = spec.sourceSettings.primaryKeys
+  override val useNameMapping: Boolean   = spec.sourceSettings.useNameMapping
 
   val datadogSocketPath: String =
     sys.env.getOrElse("ARCANE_FRAMEWORK__DATADOG_SOCKET_PATH", "/var/run/datadog/dsd.socket")

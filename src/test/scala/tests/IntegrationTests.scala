@@ -61,6 +61,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |    "baseLocation": "s3a://s3-blob-reader",
        |    "tempPath": "/tmp",
        |    "primaryKeys": ["col0"],
+       |    "useNameMapping": false,
        |    "s3": {
        |      "usePathStyle": true,
        |      "region": "us-east-1",
