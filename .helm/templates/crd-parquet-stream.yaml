@@ -95,6 +95,10 @@ spec:
                         Note that this might negatively interact with existing column mapping on the file, if present. 
                         In most cases you do not need to enable this, unless a source Parquet file is written by code that doesn't assign field identifiers.
                       default: false
+                    sourceSchema:
+                      type: string
+                      description: Optional base64-encoded empty Parquet file bytes. Will be used as a schema for the source. If not provided, schema will be inferred from a random file in the source path - which may fail if the path is empty.
+                      default: ""
                     metastore:
                       type: object
                       default: null

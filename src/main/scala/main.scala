@@ -30,10 +30,14 @@ import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
   GenericStreamingGraphBuilder
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.GenericGroupingTransformer
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.BackfillApplyBatchProcessor
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
+  BackfillApplyBatchProcessor,
+  BackfillOverwriteWatermarkProcessor
+}
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
   DisposeBatchProcessor,
-  MergeBatchProcessor
+  MergeBatchProcessor,
+  WatermarkProcessor
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
   FieldFilteringTransformer,
@@ -85,7 +89,9 @@ object main extends ZIOAppDefault {
     DeclaredMetrics.layer,
     ArcaneDimensionsProvider.layer,
     DataDog.UdsPublisher.layer,
-    ZLayer.succeed(schemaCache)
+    ZLayer.succeed(schemaCache),
+    WatermarkProcessor.layer,
+    BackfillOverwriteWatermarkProcessor.layer
   )
 
   @main
