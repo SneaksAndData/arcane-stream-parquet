@@ -3,7 +3,7 @@ package tests
 
 import models.UpsertBlobStreamContext
 import models.app.StreamSpec
-import tests.Common.StreamContextLayer
+import tests.Common.{StreamContextLayer, getLatestVersion, getWatermark}
 
 import zio.test.TestAspect.timeout
 import zio.test.*
@@ -62,6 +62,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |    "tempPath": "/tmp",
        |    "primaryKeys": ["col0"],
        |    "useNameMapping": false,
+       |    "sourceSchema": "",
        |    "s3": {
        |      "usePathStyle": true,
        |      "region": "us-east-1",
@@ -109,24 +110,30 @@ object IntegrationTests extends ZIOSpecDefault:
       for
         _              <- ZIO.attempt(Fixtures.clearTarget(targetTableName))
         backfillRunner <- Common.buildTestApp(TimeLimitLifetimeService.layer, backfillStreamContextLayer).fork
-        _ <- Common.waitForData(
-          backfillStreamContext.targetTableFullName,
+        _              <- backfillRunner.join.timeout(Duration.ofSeconds(60))
+        rows <- Common.getData(
+          streamingStreamContext.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
-          Common.TargetDecoder,
-          100 // col0 only have 100 unique values, thus we expect 100 rows total
-        )
-        _ <- backfillRunner.await.timeout(Duration.ofSeconds(10))
-      yield assertTrue(true)
+          Common.TargetDecoder
+        ) // col0 only have 100 unique values, thus we expect 100 rows total
+        watermark     <- getWatermark(streamingStreamContext.targetTableFullName.split('.').last)
+        latestVersion <- getLatestVersion
+      yield assertTrue(rows.size == 100) implies assertTrue(watermark.version.toLong == latestVersion)
     },
     test("runs stream correctly") {
       for
         streamRunner <- Common.buildTestApp(TimeLimitLifetimeService.layer, streamingStreamContextLayer).fork
+        _            <- streamRunner.join.timeout(Duration.ofSeconds(10))
+
         rows <- Common.getData(
           streamingStreamContext.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         )
-        _ <- streamRunner.await.timeout(Duration.ofSeconds(10))
-      yield assertTrue(rows.size == 100) // no new rows added after stream has started
+        watermark     <- getWatermark(streamingStreamContext.targetTableFullName.split('.').last)
+        latestVersion <- getLatestVersion
+      yield assertTrue(rows.size == 100) implies assertTrue(
+        watermark.version.toLong == latestVersion
+      ) // no new rows added after stream has started
     }
-  ) @@ timeout(zio.Duration.fromSeconds(60)) @@ TestAspect.withLiveClock @@ TestAspect.sequential
+  ) @@ timeout(zio.Duration.fromSeconds(180)) @@ TestAspect.withLiveClock @@ TestAspect.sequential

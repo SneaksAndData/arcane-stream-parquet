@@ -11,6 +11,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
   BlobSourceStreamingDataProvider
 }
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
+import com.sneaksanddata.arcane.framework.services.blobsource.versioning.BlobSourceWatermark
 import com.sneaksanddata.arcane.framework.services.blobsource.{
   UpsertBlobBackfillOverwriteBatchFactory,
   UpsertBlobHookManager
@@ -20,6 +21,8 @@ import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringServic
 import com.sneaksanddata.arcane.framework.services.iceberg.IcebergS3CatalogWriter
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DeclaredMetrics}
+import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
+import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
 import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
   GenericBackfillStreamingMergeDataProvider,
   GenericBackfillStreamingOverwriteDataProvider
@@ -29,15 +32,20 @@ import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
   GenericStreamingGraphBuilder
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.GenericGroupingTransformer
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.BackfillApplyBatchProcessor
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
+  BackfillApplyBatchProcessor,
+  BackfillOverwriteWatermarkProcessor
+}
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
   DisposeBatchProcessor,
-  MergeBatchProcessor
+  MergeBatchProcessor,
+  WatermarkProcessor
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
   FieldFilteringTransformer,
   StagingProcessor
 }
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import zio.{ULayer, ZIO, ZLayer}
 
 import java.sql.{DriverManager, ResultSet}
@@ -87,7 +95,9 @@ object Common:
       GenericStreamingGraphBuilder.backfillSubStreamLayer,
       UpsertBlobBackfillOverwriteBatchFactory.layer,
       DeclaredMetrics.layer,
-      ArcaneDimensionsProvider.layer
+      ArcaneDimensionsProvider.layer,
+      WatermarkProcessor.layer,
+      BackfillOverwriteWatermarkProcessor.layer
     )
 
   /** Gets the data from the *target* table. Using the connection string provided in the
@@ -157,3 +167,40 @@ object Common:
         rs.getString(11),
         rs.getLong(12)
       )
+
+  def getWatermark(targetTableName: String): ZIO[Any, Throwable, BlobSourceWatermark] = ZIO.scoped {
+    for
+      connection <- ZIO.attempt(DriverManager.getConnection(sys.env("ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI")))
+      statement  <- ZIO.attempt(connection.createStatement())
+      resultSet <- ZIO.fromAutoCloseable(
+        ZIO.attemptBlocking(
+          statement.executeQuery(
+            s"SELECT value FROM iceberg.test.\"$targetTableName$$properties\" WHERE key = 'comment'"
+          )
+        )
+      )
+      _         <- ZIO.attemptBlocking(resultSet.next())
+      watermark <- ZIO.attempt(BlobSourceWatermark.fromJson(resultSet.getString("value")))
+    yield watermark
+  }
+
+  def getLatestVersion: ZIO[Any, Throwable, Long] =
+    for
+      reader <- ZIO.succeed(
+        S3BlobStorageReader(
+          StaticCredentialsProvider.create(AwsBasicCredentials.create("minioadmin", "minioadmin")),
+          Some(
+            S3ClientSettings(
+              region = Some("us-east-1"),
+              endpoint = Some("http://localhost:9000"),
+              pathStyleAccess = true,
+              maxResultsPerPage = 1000
+            )
+          )
+        )
+      )
+      latestFile <- reader
+        .streamPrefixes(S3StoragePath("s3a://s3-blob-reader").get)
+        .runCollect
+        .map(_.maxBy(_.createdOn.getOrElse(0L)))
+    yield latestFile.createdOn.getOrElse(0)
