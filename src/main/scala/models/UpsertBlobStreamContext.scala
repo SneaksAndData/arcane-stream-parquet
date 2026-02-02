@@ -164,10 +164,11 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
   override val sourcePath: String        = spec.sourceSettings.baseLocation
   override val tempStoragePath: String   = spec.sourceSettings.tempPath
   override val primaryKeys: List[String] = spec.sourceSettings.primaryKeys
-  override val useNameMapping: Boolean   = spec.sourceSettings.useNameMapping
-  override val sourceSchema: Option[String] =
-    if spec.sourceSettings.sourceSchema.isBlank then None
-    else Some(spec.sourceSettings.sourceSchema)
+  // TODO: temporary for beta testing with v1 YAML
+  override val useNameMapping: Boolean   = sys.env("ARCANE_FRAMEWORK__USE_NAME_MAPPING") == "1" // spec.sourceSettings.useNameMapping
+  override val sourceSchema: Option[String] = None
+//    if spec.sourceSettings.sourceSchema.isBlank then None
+//    else Some(spec.sourceSettings.sourceSchema)
 
   val datadogSocketPath: String =
     sys.env.getOrElse("ARCANE_FRAMEWORK__DATADOG_SOCKET_PATH", "/var/run/datadog/dsd.socket")
