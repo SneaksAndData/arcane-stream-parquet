@@ -17,7 +17,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.{
 }
 import com.sneaksanddata.arcane.framework.services.caching.schema_cache.MutableSchemaCache
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.IcebergS3CatalogWriter
+import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergS3CatalogWriter, IcebergTablePropertyManager}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DataDog, DeclaredMetrics}
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
@@ -91,7 +91,8 @@ object main extends ZIOAppDefault {
     DataDog.UdsPublisher.layer,
     ZLayer.succeed(schemaCache),
     WatermarkProcessor.layer,
-    BackfillOverwriteWatermarkProcessor.layer
+    BackfillOverwriteWatermarkProcessor.layer,
+    IcebergTablePropertyManager.layer
   )
 
   @main

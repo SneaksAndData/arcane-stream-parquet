@@ -18,7 +18,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.{
 }
 import com.sneaksanddata.arcane.framework.services.caching.schema_cache.MutableSchemaCache
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.IcebergS3CatalogWriter
+import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergS3CatalogWriter, IcebergTablePropertyManager}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DeclaredMetrics}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
@@ -97,7 +97,8 @@ object Common:
       DeclaredMetrics.layer,
       ArcaneDimensionsProvider.layer,
       WatermarkProcessor.layer,
-      BackfillOverwriteWatermarkProcessor.layer
+      BackfillOverwriteWatermarkProcessor.layer,
+      IcebergTablePropertyManager.layer
     )
 
   /** Gets the data from the *target* table. Using the connection string provided in the
