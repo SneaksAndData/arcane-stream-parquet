@@ -69,8 +69,8 @@ case class SourceSettings(
     tempPath: String,
     primaryKeys: List[String],
     s3: S3Settings,
-    useNameMapping: Boolean,
-    sourceSchema: String
+    useNameMapping: Option[Boolean] = None,
+    sourceSchema: Option[String] = None
 ) derives ReadWriter
 
 case class IcebergSinkSettings(
