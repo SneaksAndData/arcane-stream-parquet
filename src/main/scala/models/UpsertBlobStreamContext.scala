@@ -15,16 +15,18 @@ import com.sneaksanddata.arcane.framework.models.settings.{
   FieldSelectionRuleSettings,
   GroupingSettings,
   IcebergCatalogSettings,
+  IcebergSinkSettings,
+  IcebergStagingSettings,
   JdbcMergeServiceClientSettings,
   OptimizeSettings,
   OrphanFilesExpirationSettings,
+  SinkSettings,
   SnapshotExpirationSettings,
   SourceBufferingSettings,
   StagingDataSettings,
   TableFormat,
   TableMaintenanceSettings,
   TablePropertiesSettings,
-  TargetTableSettings,
   VersionedDataGraphBuilderSettings
 }
 import com.sneaksanddata.arcane.framework.services.iceberg.IcebergCatalogCredential
@@ -50,10 +52,10 @@ import scala.util.Try
 case class UpsertBlobStreamContext(spec: StreamSpec)
     extends StreamContext
     with GroupingSettings
-    with IcebergCatalogSettings
+    with IcebergStagingSettings
     with JdbcMergeServiceClientSettings
     with VersionedDataGraphBuilderSettings
-    with TargetTableSettings
+    with SinkSettings
     with TablePropertiesSettings
     with FieldSelectionRuleSettings
     with BackfillSettings
@@ -68,14 +70,14 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
   override val changeCaptureInterval: Duration = Duration.ofSeconds(spec.sourceSettings.changeCaptureIntervalSeconds)
   override val groupingInterval: Duration      = Duration.ofSeconds(spec.groupingIntervalSeconds)
 
-  override val namespace: String               = spec.stagingDataSettings.catalog.namespace
+  override val namespace: String               = spec.stagingDataSettings.catalog.schemaName
   override val warehouse: String               = spec.stagingDataSettings.catalog.warehouse
   override val catalogUri: String              = spec.stagingDataSettings.catalog.catalogUri
   override val stagingLocation: Option[String] = spec.stagingDataSettings.dataLocation
 
   override val additionalProperties: Map[String, String] = sys.env.get("ARCANE_FRAMEWORK__CATALOG_NO_AUTH") match
-    case Some(_) => Map()
-    case None    => IcebergCatalogCredential.oAuth2Properties
+    case Some(_) => S3CatalogFileIO.properties
+    case None    => S3CatalogFileIO.properties ++ IcebergCatalogCredential.oAuth2Properties
 
   override val s3CatalogFileIO: S3CatalogFileIO = S3CatalogFileIO
 
@@ -173,6 +175,19 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
     sys.env.getOrElse("ARCANE_FRAMEWORK__METRICS_PUBLISHER_INTERVAL_MILLIS", "100").toInt
   )
 
+  // TODO: environment variable subs here are temporary to allow deploying on v1 CRD. Remove after migration
+  override val icebergSinkSettings: IcebergSinkSettings = new IcebergSinkSettings {
+    override val namespace: String =
+      sys.env("ARCANE_FRAMEWORK__ICEBERG_SINK_NAMESPACE") // spec.sinkSettings.sinkCatalogSettings.namespace.getOrElse()
+    override val warehouse: String =
+      sys.env("ARCANE_FRAMEWORK__ICEBERG_SINK_WAREHOUSE") // spec.sinkSettings.sinkCatalogSettings.warehouse.getOrElse()
+    override val catalogUri: String =
+      sys.env(
+        "ARCANE_FRAMEWORK__ICEBERG_SINK_CATALOG_URI"
+      ) // spec.sinkSettings.sinkCatalogSettings.catalogUri.getOrElse()
+    override val additionalProperties: Map[String, String] = IcebergCatalogCredential.oAuth2Properties
+  }
+
 given Conversion[UpsertBlobStreamContext, DatagramSocketConfig] with
   def apply(context: UpsertBlobStreamContext): DatagramSocketConfig =
     DatagramSocketConfig(context.datadogSocketPath)
@@ -183,8 +198,8 @@ given Conversion[UpsertBlobStreamContext, MetricsConfig] with
 
 object UpsertBlobStreamContext:
 
-  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings & IcebergCatalogSettings &
-    JdbcMergeServiceClientSettings & TargetTableSettings & UpsertBlobStreamContext & TablePropertiesSettings &
+  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings & IcebergStagingSettings &
+    JdbcMergeServiceClientSettings & SinkSettings & UpsertBlobStreamContext & TablePropertiesSettings &
     FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & ParquetBlobSourceSettings &
     SourceBufferingSettings & MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
 

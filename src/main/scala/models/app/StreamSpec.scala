@@ -47,7 +47,8 @@ case class SinkSettings(
     optimizeSettings: OptimizeSettingsSpec,
     snapshotExpirationSettings: SnapshotExpirationSettingsSpec,
     orphanFilesExpirationSettings: OrphanFilesExpirationSettings,
-    analyzeSettings: AnalyzeSettings
+    analyzeSettings: AnalyzeSettings,
+    sinkCatalogSettings: Option[IcebergSinkSettings] = None
 ) derives ReadWriter
 
 case class S3Settings(
@@ -70,6 +71,12 @@ case class SourceSettings(
     s3: S3Settings,
     useNameMapping: Boolean,
     sourceSchema: String
+) derives ReadWriter
+
+case class IcebergSinkSettings(
+    namespace: Option[String] = None,
+    warehouse: Option[String] = None,
+    catalogUri: Option[String] = None
 ) derives ReadWriter
 
 case class TablePropertiesSettings(
