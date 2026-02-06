@@ -152,9 +152,9 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
   )
 
   override val icebergSinkSettings: IcebergSinkSettings = new IcebergSinkSettings {
-    override val namespace: String = spec.sinkSettings.sinkCatalogSettings.namespace
-    override val warehouse: String = spec.sinkSettings.sinkCatalogSettings.warehouse
-    override val catalogUri: String = spec.sinkSettings.sinkCatalogSettings.catalogUri
+    override val namespace: String                         = spec.sinkSettings.sinkCatalogSettings.namespace
+    override val warehouse: String                         = spec.sinkSettings.sinkCatalogSettings.warehouse
+    override val catalogUri: String                        = spec.sinkSettings.sinkCatalogSettings.catalogUri
     override val additionalProperties: Map[String, String] = IcebergCatalogCredential.oAuth2Properties
   }
 
