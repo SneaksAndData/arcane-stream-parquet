@@ -8,7 +8,6 @@ import upickle.default.*
 /** The configuration of Iceberg catalog
   */
 case class CatalogSettings(
-    namespace: String,
     warehouse: String,
     catalogUri: String,
     catalogName: String,
@@ -48,7 +47,7 @@ case class SinkSettings(
     snapshotExpirationSettings: SnapshotExpirationSettingsSpec,
     orphanFilesExpirationSettings: OrphanFilesExpirationSettings,
     analyzeSettings: AnalyzeSettings,
-    sinkCatalogSettings: Option[IcebergSinkSettings] = None
+    sinkCatalogSettings: IcebergSinkSettings
 ) derives ReadWriter
 
 case class S3Settings(
@@ -74,9 +73,9 @@ case class SourceSettings(
 ) derives ReadWriter
 
 case class IcebergSinkSettings(
-    namespace: Option[String] = None,
-    warehouse: Option[String] = None,
-    catalogUri: Option[String] = None
+    namespace: String,
+    warehouse: String,
+    catalogUri: String
 ) derives ReadWriter
 
 case class TablePropertiesSettings(
