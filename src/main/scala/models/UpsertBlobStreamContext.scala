@@ -6,43 +6,19 @@ import models.app.StreamSpec
 import com.sneaksanddata.arcane.framework.models.app.StreamContext
 import com.sneaksanddata.arcane.framework.models.settings
 import com.sneaksanddata.arcane.framework.models.settings.blob.ParquetBlobSourceSettings
-import com.sneaksanddata.arcane.framework.models.settings.{
-  AnalyzeSettings,
-  BackfillBehavior,
-  BackfillSettings,
-  BufferingStrategy,
-  FieldSelectionRule,
-  FieldSelectionRuleSettings,
-  GroupingSettings,
-  IcebergCatalogSettings,
-  IcebergSinkSettings,
-  IcebergStagingSettings,
-  JdbcMergeServiceClientSettings,
-  OptimizeSettings,
-  OrphanFilesExpirationSettings,
-  SinkSettings,
-  SnapshotExpirationSettings,
-  SourceBufferingSettings,
-  StagingDataSettings,
-  TableFormat,
-  TableMaintenanceSettings,
-  TablePropertiesSettings,
-  VersionedDataGraphBuilderSettings
-}
+import com.sneaksanddata.arcane.framework.models.settings.*
 import com.sneaksanddata.arcane.framework.services.iceberg.IcebergCatalogCredential
 import com.sneaksanddata.arcane.framework.services.iceberg.base.S3CatalogFileIO
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3ClientSettings
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
-import software.amazon.awssdk.auth.credentials.{DefaultCredentialsProvider, EnvironmentVariableCredentialsProvider}
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import zio.metrics.connectors.MetricsConfig
 import zio.metrics.connectors.datadog.DatadogPublisherConfig
 import zio.metrics.connectors.statsd.DatagramSocketConfig
 import zio.{ZIO, ZLayer}
 
-import java.time.format.DateTimeFormatter
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
-import scala.util.Try
 
 /** The context for the UpsertBlob Parquet stream.
   *
@@ -175,16 +151,10 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
     sys.env.getOrElse("ARCANE_FRAMEWORK__METRICS_PUBLISHER_INTERVAL_MILLIS", "100").toInt
   )
 
-  // TODO: environment variable subs here are temporary to allow deploying on v1 CRD. Remove after migration
   override val icebergSinkSettings: IcebergSinkSettings = new IcebergSinkSettings {
-    override val namespace: String =
-      sys.env("ARCANE_FRAMEWORK__ICEBERG_SINK_NAMESPACE") // spec.sinkSettings.sinkCatalogSettings.namespace.getOrElse()
-    override val warehouse: String =
-      sys.env("ARCANE_FRAMEWORK__ICEBERG_SINK_WAREHOUSE") // spec.sinkSettings.sinkCatalogSettings.warehouse.getOrElse()
-    override val catalogUri: String =
-      sys.env(
-        "ARCANE_FRAMEWORK__ICEBERG_SINK_CATALOG_URI"
-      ) // spec.sinkSettings.sinkCatalogSettings.catalogUri.getOrElse()
+    override val namespace: String                         = spec.sinkSettings.sinkCatalogSettings.namespace
+    override val warehouse: String                         = spec.sinkSettings.sinkCatalogSettings.warehouse
+    override val catalogUri: String                        = spec.sinkSettings.sinkCatalogSettings.catalogUri
     override val additionalProperties: Map[String, String] = IcebergCatalogCredential.oAuth2Properties
   }
 
