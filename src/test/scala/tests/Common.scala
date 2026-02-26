@@ -45,6 +45,8 @@ import com.sneaksanddata.arcane.framework.services.streaming.processors.transfor
   FieldFilteringTransformer,
   StagingProcessor
 }
+import com.sneaksanddata.arcane.framework.testkit.appbuilder.TestAppBuilder.buildTestApp
+import com.sneaksanddata.arcane.framework.testkit.streaming.TimeLimitLifetimeService
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import zio.{ULayer, ZIO, ZLayer}
 
@@ -55,24 +57,24 @@ import java.time.Duration
   */
 object Common:
 
-  type StreamLifeTimeServiceLayer = ZLayer[Any, Nothing, StreamLifetimeService & InterruptionToken]
-  type StreamContextLayer         = ULayer[UpsertBlobStreamContext]
-
   /** Builds the test application from the provided layers.
-    * @param lifetimeService
-    *   The lifetime service layer.
     * @param streamContextLayer
     *   The stream context layer.
     * @return
     *   The test application.
     */
-  def buildTestApp(
-      lifetimeService: StreamLifeTimeServiceLayer,
-      streamContextLayer: StreamContextLayer
+  def getTestApp(
+      runDuration: Duration,
+      streamContextLayer: ZLayer[Any, Nothing, UpsertBlobStreamContext.Environment]
   ): ZIO[Any, Throwable, Unit] =
-    appLayer.provide(
+    buildTestApp(
+      appLayer,
       streamContextLayer,
-      lifetimeService,
+      S3Reader.layer,
+      BlobSourceStreamingDataProvider.layer,
+      UpsertBlobHookManager.layer,
+      UpsertBlobBackfillOverwriteBatchFactory.layer
+    )(
       GenericStreamRunnerService.layer,
       GenericGraphBuilderFactory.composedLayer,
       GenericGroupingTransformer.layer,
@@ -81,75 +83,21 @@ object Common:
       MergeBatchProcessor.layer,
       StagingProcessor.layer,
       FieldsFilteringService.layer,
-      S3Reader.layer,
-      BlobSourceDataProvider.layer,
-      BlobListingParquetSource.layer,
       IcebergS3CatalogWriter.layer,
       JdbcMergeServiceClient.layer,
-      BlobSourceStreamingDataProvider.layer,
-      UpsertBlobHookManager.layer,
       ZLayer.succeed(MutableSchemaCache()),
       BackfillApplyBatchProcessor.layer,
       GenericBackfillStreamingOverwriteDataProvider.layer,
       GenericBackfillStreamingMergeDataProvider.layer,
       GenericStreamingGraphBuilder.backfillSubStreamLayer,
-      UpsertBlobBackfillOverwriteBatchFactory.layer,
       DeclaredMetrics.layer,
       ArcaneDimensionsProvider.layer,
       WatermarkProcessor.layer,
       BackfillOverwriteWatermarkProcessor.layer,
-      IcebergTablePropertyManager.layer
-    )
-
-  /** Gets the data from the *target* table. Using the connection string provided in the
-    * `ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI` environment variable.
-    *
-    * @param targetTableName
-    *   The name of the target table.
-    * @param decoder
-    *   The decoder for the result set.
-    * @tparam Result
-    *   The type of the result.
-    * @return
-    *   A ZIO effect that gets the data.
-    */
-  def getData[Result](
-      targetTableName: String,
-      columnList: String,
-      decoder: ResultSet => Result
-  ): ZIO[Any, Throwable, List[Result]] = ZIO.scoped {
-    for
-      connection <- ZIO.attempt(DriverManager.getConnection(sys.env("ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI")))
-      statement  <- ZIO.attempt(connection.createStatement())
-      resultSet <- ZIO.fromAutoCloseable(
-        ZIO.attempt(statement.executeQuery(s"SELECT $columnList from $targetTableName"))
-      )
-      data <- ZIO.attempt {
-        Iterator
-          .continually((resultSet.next(), resultSet))
-          .takeWhile(_._1)
-          .map { case (_, rs) => decoder(rs) }
-          .toList
-      }
-    yield data
-  }
-
-  def waitForData[T](
-      tableName: String,
-      columnList: String,
-      decoder: ResultSet => T,
-      expectedSize: Int
-  ): ZIO[Any, Nothing, Unit] = ZIO
-    .sleep(Duration.ofSeconds(1))
-    .repeatUntilZIO(_ =>
-      (for {
-        _ <- ZIO.log("Waiting for data to be loaded")
-        inserted <- Common.getData(
-          tableName,
-          columnList,
-          decoder
-        )
-      } yield inserted.length == expectedSize).orElseSucceed(false)
+      IcebergTablePropertyManager.layer,
+      ZLayer.succeed(TimeLimitLifetimeService(runDuration)),
+      BlobSourceDataProvider.layer,
+      BlobListingParquetSource.layer
     )
 
   val TargetDecoder: ResultSet => (Long, String, Long, String, Long, String, Long, String, Long, String, String, Long) =
@@ -168,22 +116,6 @@ object Common:
         rs.getString(11),
         rs.getLong(12)
       )
-
-  def getWatermark(targetTableName: String): ZIO[Any, Throwable, BlobSourceWatermark] = ZIO.scoped {
-    for
-      connection <- ZIO.attempt(DriverManager.getConnection(sys.env("ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI")))
-      statement  <- ZIO.attempt(connection.createStatement())
-      resultSet <- ZIO.fromAutoCloseable(
-        ZIO.attemptBlocking(
-          statement.executeQuery(
-            s"SELECT value FROM iceberg.test.\"$targetTableName$$properties\" WHERE key = 'comment'"
-          )
-        )
-      )
-      _         <- ZIO.attemptBlocking(resultSet.next())
-      watermark <- ZIO.attempt(BlobSourceWatermark.fromJson(resultSet.getString("value")))
-    yield watermark
-  }
 
   def getLatestVersion: ZIO[Any, Throwable, Long] =
     for
