@@ -35,6 +35,13 @@ spec:
   # The maximum number of rows in a group
   rowsPerGroup: 10000
 
+  # enhancements for logging and metrics middleware
+  observabilitySettings:
+    # extra metric tags for ALL metrics emitted from the streaming app
+    metricTags:
+      key1: value0
+      key2: value1
+
   # The settings of the source table
   sourceSettings:
     

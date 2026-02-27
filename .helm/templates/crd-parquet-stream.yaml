@@ -71,6 +71,18 @@ spec:
                         - ORC
                         - AVRO
                       default: PARQUET
+                observabilitySettings:
+                  type: object
+                  description: Configurations for enhancing logs and metrics produced by the plugin application
+                  properties:
+                    metricTags:
+                      type: object
+                      description: Additional tags to be assigned to all emitted metrics
+                      additionalProperties:
+                        type: string
+                      default: {}
+                  default:
+                    metricTags: {}
                 sourceSettings:
                   type: object
                   properties:
