@@ -5,6 +5,12 @@ import com.sneaksanddata.arcane.framework.models.settings.{TableFormat, TablePro
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3ClientSettings
 import upickle.default.*
 
+/** Additional logging and metrics configurations
+  */
+case class ObservabilitySettings(
+    metricTags: Map[String, String]
+) derives ReadWriter
+
 /** The configuration of Iceberg catalog
   */
 case class CatalogSettings(
@@ -104,6 +110,7 @@ case class FieldSelectionRuleSpec(ruleType: String, fields: Array[String]) deriv
   *   The grouping interval in seconds
   */
 case class StreamSpec(
+    observabilitySettings: ObservabilitySettings,
     sourceSettings: SourceSettings,
 
     // Grouping settings

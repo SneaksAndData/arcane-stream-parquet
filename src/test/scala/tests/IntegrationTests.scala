@@ -70,6 +70,12 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "catalogUri": "http://localhost:20001/catalog"
        |    }
        |  },
+       |  "observabilitySettings": {
+       |    "metricTags": {
+       |      "key1": "value0",
+       |      "key2": "value1"
+       |    }
+       |  }
        |  "sourceSettings": {
        |    "changeCaptureIntervalSeconds": 5,
        |    "baseLocation": "s3a://s3-blob-reader",

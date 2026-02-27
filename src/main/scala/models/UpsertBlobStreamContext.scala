@@ -39,6 +39,8 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
     with ParquetBlobSourceSettings
     with SourceBufferingSettings:
 
+  override def customTags: Map[String, String] = spec.observabilitySettings.metricTags
+
   override val rowsPerGroup: Int =
     System.getenv().getOrDefault("STREAMCONTEXT__ROWS_PER_GROUP", spec.rowsPerGroup.toString).toInt
 
