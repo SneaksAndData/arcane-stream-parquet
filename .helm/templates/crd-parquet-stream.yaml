@@ -38,6 +38,9 @@ spec:
             spec:
               type: object
               properties:
+                suspended:
+                  description: Suspended indicates whether the stream is suspended.
+                  type: boolean
                 tableProperties:
                   type: object
                   default:
@@ -68,6 +71,18 @@ spec:
                         - ORC
                         - AVRO
                       default: PARQUET
+                observabilitySettings:
+                  type: object
+                  description: Configurations for enhancing logs and metrics produced by the plugin application
+                  properties:
+                    metricTags:
+                      type: object
+                      description: Additional tags to be assigned to all emitted metrics
+                      additionalProperties:
+                        type: string
+                      default: {}
+                  default:
+                    metricTags: {}
                 sourceSettings:
                   type: object
                   properties:
@@ -256,16 +271,6 @@ spec:
                           type: string
                         catalogUri:
                           type: string
-                lookBackInterval:
-                  type: integer
-                  description: |
-                    DEPRECATED - TO BE REMOVED IN 2.1 RELEASE. DO NOT USE THIS SETTING!
-                    
-                    Number of seconds to look back when determining first set of changes to extract.
-                    Can be set in interval from 1 second to 10 hours. Default is 1 hour.
-                  minimum: 1
-                  maximum: 1209600
-                  default: 3600
                 stagingDataSettings:
                   type: object
                   properties:
@@ -325,14 +330,9 @@ spec:
               properties:
                 phase:
                   type: string
-                  enum:
-                    - RESTARTING
-                    - RUNNING
-                    - RELOADING
-                    - TERMINATING
-                    - STOPPED
-                    - SUSPENDED
-                    - FAILED
+                configurationHash:
+                  description: ConfigurationHash represents the hash of the current configuration.
+                  type: string
                 conditions:
                   type: array
                   items:
@@ -345,11 +345,6 @@ spec:
                         type: string
                       type:
                         type: string
-                        enum:
-                          - WARNING
-                          - ERROR
-                          - INFO
-                          - READY
                       status:
                         type: string
                         enum:

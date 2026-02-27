@@ -10,7 +10,6 @@
     "kind": "StreamingJobTemplate",
     "name": "arcane-stream-parquet-standard-job"
   },
-  "lookBackInterval": 7200,
   "tableProperties": {
     "partitionExpressions": [],
     "format": "PARQUET",
