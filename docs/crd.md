@@ -38,6 +38,7 @@ spec:
   # enhancements for logging and metrics middleware
   observabilitySettings:
     # extra metric tags for ALL metrics emitted from the streaming app
+    # Note that tag name and value should only contain alphanumeric characters, separated by `_` if needed 
     metricTags:
       key1: value0
       key2: value1
