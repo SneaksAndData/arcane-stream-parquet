@@ -19,19 +19,19 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3.4.0
+        uses: docker/login-action@v3.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get project version
-        uses: SneaksAndData/github-actions/generate_version@v0.1.9
+        uses: SneaksAndData/github-actions/generate_version@v0.1.11
         id: version
 
       - name: Extract metadata (tags, labels) for Docker
@@ -51,7 +51,7 @@ jobs:
           platforms: linux/arm64,linux/amd64
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6.9.0
+        uses: docker/build-push-action@v6.18.0
         with:
           context: .
           file: .container/Dockerfile
@@ -63,7 +63,7 @@ jobs:
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Chart
-        uses: SneaksAndData/github-actions/build_helm_chart@v0.1.9
+        uses: SneaksAndData/github-actions/build_helm_chart@v0.1.11
         with:
           application: arcane-stream-parquet
           app_version: ${{ steps.meta.outputs.version }}

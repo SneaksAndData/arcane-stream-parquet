@@ -25,7 +25,7 @@ jobs:
       packages: read       # required for building the SBT project
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -39,6 +39,10 @@ jobs:
       - name: Get Compose Logs
         if: always()
         run: docker compose logs
+
+      - name: Import the environment variables
+        run: cat integration-tests.env >> $GITHUB_ENV
+
       - name: Build and test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
