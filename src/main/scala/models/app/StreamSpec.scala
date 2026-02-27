@@ -5,10 +5,15 @@ import com.sneaksanddata.arcane.framework.models.settings.{TableFormat, TablePro
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3ClientSettings
 import upickle.default.*
 
+/** Additional logging and metrics configurations
+  */
+case class ObservabilitySettings(
+    metricTags: Map[String, String]
+) derives ReadWriter
+
 /** The configuration of Iceberg catalog
   */
 case class CatalogSettings(
-    namespace: String,
     warehouse: String,
     catalogUri: String,
     catalogName: String,
@@ -47,7 +52,8 @@ case class SinkSettings(
     optimizeSettings: OptimizeSettingsSpec,
     snapshotExpirationSettings: SnapshotExpirationSettingsSpec,
     orphanFilesExpirationSettings: OrphanFilesExpirationSettings,
-    analyzeSettings: AnalyzeSettings
+    analyzeSettings: AnalyzeSettings,
+    sinkCatalogSettings: IcebergSinkSettings
 ) derives ReadWriter
 
 case class S3Settings(
@@ -67,7 +73,15 @@ case class SourceSettings(
     baseLocation: String,
     tempPath: String,
     primaryKeys: List[String],
-    s3: S3Settings
+    s3: S3Settings,
+    useNameMapping: Boolean,
+    sourceSchema: String
+) derives ReadWriter
+
+case class IcebergSinkSettings(
+    namespace: String,
+    warehouse: String,
+    catalogUri: String
 ) derives ReadWriter
 
 case class TablePropertiesSettings(
@@ -94,16 +108,14 @@ case class FieldSelectionRuleSpec(ruleType: String, fields: Array[String]) deriv
   *   The number of rows per group in the staging table
   * @param groupingIntervalSeconds
   *   The grouping interval in seconds
-  * @param lookBackInterval
-  *   The look back interval in seconds
   */
 case class StreamSpec(
+    observabilitySettings: ObservabilitySettings,
     sourceSettings: SourceSettings,
 
     // Grouping settings
     rowsPerGroup: Int,
     groupingIntervalSeconds: Int,
-    lookBackInterval: Int,
 
     // Iceberg settings
     stagingDataSettings: StagingDataSettings,
