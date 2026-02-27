@@ -1,0 +1,233 @@
+# The stream definition user guide
+
+# The sample stream definition
+
+```yaml
+apiVersion: streaming.sneaksanddata.com/v1
+kind: ParquetStream
+metadata:
+  # The name of the resource should be unique within the namespace (including resources of the other kind)
+  name: parquet-sample-stream
+  namespace: arcane
+spec:
+  # The reference to the job template used in the backfill mode.
+  backfillJobTemplateRef:
+    apiGroup: streaming.sneaksanddata.com
+    kind: StreamingJobTemplate
+    name: backfill-job-template
+
+  # The reference to the job template used in the streaming mode
+  jobTemplateRef:
+    apiGroup: streaming.sneaksanddata.com
+    kind: StreamingJobTemplate
+    name: job-template
+
+  # The reference to the secret containing storage connection and merge service credentials,
+  # which must be in the same namespace as the stream definition.
+  connectionStringRef:
+    name: arcane-connection-string
+
+  # Grouping settings
+  # Arcane groups the incoming rows into batches.
+  # The grouping settings define the grouping interval in seconds and the maximum number of rows in a group.
+  # Arcane will emit rows if the grouping interval is reached or the maximum number of rows in a group is reached.
+  groupingIntervalSeconds: 15
+  # The maximum number of rows in a group
+  rowsPerGroup: 10000
+
+  # enhancements for logging and metrics middleware
+  observabilitySettings:
+    # extra metric tags for ALL metrics emitted from the streaming app
+    metricTags:
+      key1: value0
+      key2: value1
+
+  # The settings of the source table
+  sourceSettings:
+    
+    # Interval to capture changes in the source path if the stream is running in the streaming mode.
+    # If the source is not updated, the stream will wait for the interval to expire checking for changes again.
+    changeCaptureIntervalSeconds: 15
+
+    # Location of source data, in HDFS format
+    baseLocation: s3a://bucket/prefix
+    
+    # Path to store cached files, container-internal. Normally you do not need to change this.
+    tempPath: /tmp/parquet-stream
+    
+    # A list of field names that compose a primary key of the source dataset
+    primaryKeys:
+      - colA
+      - colC
+    
+    # Identical effect to what schema.name-mapping.default provides
+    useNameMapping: false
+
+    # Base64-encoded empty Parquet file with schema compliant with source data
+    sourceSchema: base64 string
+
+    # NYI: reserved for event notifications settings
+    # if metastore is used, bucket LIST calls are not performed
+    metastore:
+      schemaName: ""
+      tableName: ""
+      
+    # Settings for S3 client used to poll the source  
+    s3:
+      usePathStyle: true
+      region: us-east-1
+      endpoint: s3.amazonaws.com
+      maxResultsPerPage: 1000
+      retryMaxAttempts: 1
+      retryBaseDelay: 0.1
+      retryMaxDelay: 0.5
+      
+    # Optional configuration of the source buffering.
+    # Sets the buffering strategy for the source.
+    # Which allows the source to run independently of  the sink in parallel.
+    # If not set, buffering is disabled
+    buffering:
+      
+      # The buffering strategy
+      # Can be `unbounded` or `bounded`
+      strategy:
+        # - unbounded: The source will run independently of the sink and will not wait for the sink to
+        #              process the data. In this case the source will buffer it's output to the unbounded buffer.
+        #              This strategy can significantly increase both the memory usage by the pod and the throughput
+        #              of the stream, which can be desirable for backfill jobs.
+        #              This is the default strategy for backfill jobs.
+        # - bounded:   The source will run independently of the sink and will not wait for the sink to
+        #              process the data. In this case the source will buffer it's output to the bounded buffer.
+        #              If the buffer is full, the source will wait for the sink to process the data before
+        #              continuing. If this strategy is used the maxBufferSize must be set.
+        strategy: bounded
+        
+        # The maximum size of the buffer in rows for the bounded strategy
+        maxBufferSize: 1000
+
+
+  # The staging data settings
+  stagingDataSettings:
+    
+    # The data catalog settings that holds the information about staging data
+    catalog:
+      
+      # The URI of the data catalog
+      catalogUri: http://catalog.data-catalog.svc.cluster.local:8181/catalog
+      
+      # The name of the catalog
+      catalogName: staging_data_catalog
+      
+      # The namespace that contains the staging tables
+      namespace: staging
+      
+      # The schema name that contains the staging tables
+      schemaName: dbo
+      
+      # The warehouse name that contains the staging tables
+      warehouse: staging
+      
+    # The prefix for the staging table names. Arcane creates the unique table name for each batch of data received
+    # from the source table. The table name is generated by concatenating the prefix and the GUID.
+    # When the batch is merged into the target table, the staging table is dropped unless the stream is
+    # running in the backfill mode. In the backfill mode the staging table is kept to speed up the backfill process.
+    # When stream starts, it will look for the staging tables with the prefix and drop them.
+    tableNamePrefix: staging_a503
+
+    # The maximum number of rows in a file when writing to the staging table.
+    # The files are written in the staging table in parallel, so decreasing the number of rows
+    # will increase the number of files in the staging table.
+    maxRowsPerFile: 1000
+    
+  # The target data settings
+  sinkSettings:
+    
+    # The target table full name
+    # Arcane does not interact with the target table directly, so it needs only the name of the table.
+    targetTableName: catalog_name.schema.table
+    
+    # Optimization tasks settings. Arcane can invoke the Trino optimization tasks during the streaming process.
+    # The optimize command is used for rewriting the content of the specified table so that it is merged
+    # into fewer but larger files. See https://trino.io/docs/current/connector/iceberg.html#optimize for details.
+    optimizeSettings:
+      
+      # Number of batches to wait before invoking the optimization task
+      batchThreshold: 60
+      
+      # All files with a size below the threshold will be merged into one file.
+      fileSizeThreshold: 512MB
+     
+    # Orphan files expiration task settings. Arcane can execute the Trino remove_orphan_files command during
+    # the streaming process. Deleting orphan files from time to time is recommended to keep size of a table’s data 
+    # directory under control. See https://trino.io/docs/current/connector/iceberg.html#remove-orphan-files for details.
+    orphanFilesExpirationSettings:
+      
+      # Number of batches to wait before invoking the task
+      batchThreshold: 60
+      
+      # All files that are older than the threshold will be removed
+      retentionThreshold: 6h
+      
+    # Snapshot expiration task settings. Arcane can execute the Trino expire_snapshots command during
+    # the streaming process. Regularly expiring snapshots is recommended to delete data files that are no longer
+    # needed, and to keep the size of table metadata small.
+    # See https://trino.io/docs/current/connector/iceberg.html#expire-snapshotsfor details.
+    snapshotExpirationSettings:
+      
+      # Number of batches to wait before invoking the task
+      batchThreshold: 60
+
+      # The procedure affects all snapshots that are older than the time period configured
+      retentionThreshold: 6h
+
+  # The rule that contains the list of fields to be selected from the source table
+  # and the rule type (all, exclude or include)
+  # NOTE: Arcane stream runner normalizes names of the fields by removing the special characters (e.g. $, /, \, etc.)
+  # The field names in the rule should be normalized as well
+  # Example
+  # fieldSelectionRule:
+  #   fields:
+  #     - field1
+  #     - field2
+  #   ruleType: include
+  fieldSelectionRule:
+    
+    # The list of fields to be selected from the source table
+    fields: []
+    
+    # The rule type (all, exclude or include)
+    ruleType: all
+
+  # The table properties used to create the staging and the target table
+  # See https://trino.io/docs/current/connector/iceberg.html#table-properties for details
+  # Example
+  # tableProperties:
+  #   format: PARQUET
+  #   parquetBloomFilterColumns:
+  #     - field1
+  #     - field2
+  #   partitionExpressions:
+  #     - bucket(arcane_merge_key, 10) 
+  #     - month(order_date)
+  #   sortedBy:
+  #     - order_date ASC NULLS LAST
+  #     - order_id
+  tableProperties:
+    
+    # Specifies the format of table data files
+    format: PARQUET
+    
+    # List of columns to use for Parquet bloom filter.
+    # It improves the performance of queries using Equality and IN predicates when reading Parquet files.
+    # The column names in this list should be normalized (see above).
+    parquetBloomFilterColumns: []
+    
+    # The list of partition expressons to be used for partitioning the target table
+    # See: https://trino.io/docs/current/connector/iceberg.html#partitioned-tables
+    partitionExpressions: []
+    
+    # The sort order to be applied during writes to the content of each file written to the table.
+    # The column names in this list should be normalized (see above).
+    sortedBy: []
+
+```

@@ -2,7 +2,7 @@ package com.sneaksanddata.arcane.stream_parquet
 
 import models.{S3Reader, UpsertBlobStreamContext}
 
-import com.sneaksanddata.arcane.framework.excpetions.StreamFailException
+import com.sneaksanddata.arcane.framework.exceptions.StreamFailException
 import com.sneaksanddata.arcane.framework.logging.ZIOLogAnnotations.zlog
 import com.sneaksanddata.arcane.framework.services.app.base.StreamRunnerService
 import com.sneaksanddata.arcane.framework.services.app.{GenericStreamRunnerService, PosixStreamLifetimeService}
@@ -17,7 +17,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.{
 }
 import com.sneaksanddata.arcane.framework.services.caching.schema_cache.MutableSchemaCache
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.IcebergS3CatalogWriter
+import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergS3CatalogWriter, IcebergTablePropertyManager}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DataDog, DeclaredMetrics}
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
@@ -30,10 +30,14 @@ import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
   GenericStreamingGraphBuilder
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.GenericGroupingTransformer
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.BackfillApplyBatchProcessor
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
+  BackfillApplyBatchProcessor,
+  BackfillOverwriteWatermarkProcessor
+}
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
   DisposeBatchProcessor,
-  MergeBatchProcessor
+  MergeBatchProcessor,
+  WatermarkProcessor
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
   FieldFilteringTransformer,
@@ -85,7 +89,10 @@ object main extends ZIOAppDefault {
     DeclaredMetrics.layer,
     ArcaneDimensionsProvider.layer,
     DataDog.UdsPublisher.layer,
-    ZLayer.succeed(schemaCache)
+    ZLayer.succeed(schemaCache),
+    WatermarkProcessor.layer,
+    BackfillOverwriteWatermarkProcessor.layer,
+    IcebergTablePropertyManager.layer
   )
 
   @main

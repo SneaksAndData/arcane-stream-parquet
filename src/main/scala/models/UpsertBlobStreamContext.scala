@@ -5,41 +5,20 @@ import models.app.StreamSpec
 
 import com.sneaksanddata.arcane.framework.models.app.StreamContext
 import com.sneaksanddata.arcane.framework.models.settings
-import com.sneaksanddata.arcane.framework.models.settings.{
-  BackfillBehavior,
-  BackfillSettings,
-  BlobSourceSettings,
-  BufferingStrategy,
-  FieldSelectionRule,
-  FieldSelectionRuleSettings,
-  GroupingSettings,
-  IcebergCatalogSettings,
-  JdbcMergeServiceClientSettings,
-  OptimizeSettings,
-  OrphanFilesExpirationSettings,
-  SnapshotExpirationSettings,
-  SourceBufferingSettings,
-  StagingDataSettings,
-  TableFormat,
-  TableMaintenanceSettings,
-  TablePropertiesSettings,
-  TargetTableSettings,
-  VersionedDataGraphBuilderSettings
-}
+import com.sneaksanddata.arcane.framework.models.settings.blob.ParquetBlobSourceSettings
+import com.sneaksanddata.arcane.framework.models.settings.*
 import com.sneaksanddata.arcane.framework.services.iceberg.IcebergCatalogCredential
 import com.sneaksanddata.arcane.framework.services.iceberg.base.S3CatalogFileIO
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3ClientSettings
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
-import software.amazon.awssdk.auth.credentials.{DefaultCredentialsProvider, EnvironmentVariableCredentialsProvider}
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import zio.metrics.connectors.MetricsConfig
 import zio.metrics.connectors.datadog.DatadogPublisherConfig
 import zio.metrics.connectors.statsd.DatagramSocketConfig
 import zio.{ZIO, ZLayer}
 
-import java.time.format.DateTimeFormatter
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.UUID
-import scala.util.Try
 
 /** The context for the UpsertBlob Parquet stream.
   *
@@ -49,32 +28,33 @@ import scala.util.Try
 case class UpsertBlobStreamContext(spec: StreamSpec)
     extends StreamContext
     with GroupingSettings
-    with IcebergCatalogSettings
+    with IcebergStagingSettings
     with JdbcMergeServiceClientSettings
     with VersionedDataGraphBuilderSettings
-    with TargetTableSettings
+    with SinkSettings
     with TablePropertiesSettings
     with FieldSelectionRuleSettings
     with BackfillSettings
     with StagingDataSettings
-    with BlobSourceSettings
+    with ParquetBlobSourceSettings
     with SourceBufferingSettings:
+
+  override def customTags: Map[String, String] = spec.observabilitySettings.metricTags
 
   override val rowsPerGroup: Int =
     System.getenv().getOrDefault("STREAMCONTEXT__ROWS_PER_GROUP", spec.rowsPerGroup.toString).toInt
 
-  override val lookBackInterval: Duration      = Duration.ofSeconds(spec.lookBackInterval)
   override val changeCaptureInterval: Duration = Duration.ofSeconds(spec.sourceSettings.changeCaptureIntervalSeconds)
   override val groupingInterval: Duration      = Duration.ofSeconds(spec.groupingIntervalSeconds)
 
-  override val namespace: String               = spec.stagingDataSettings.catalog.namespace
+  override val namespace: String               = spec.stagingDataSettings.catalog.schemaName
   override val warehouse: String               = spec.stagingDataSettings.catalog.warehouse
   override val catalogUri: String              = spec.stagingDataSettings.catalog.catalogUri
   override val stagingLocation: Option[String] = spec.stagingDataSettings.dataLocation
 
   override val additionalProperties: Map[String, String] = sys.env.get("ARCANE_FRAMEWORK__CATALOG_NO_AUTH") match
-    case Some(_) => Map()
-    case None    => IcebergCatalogCredential.oAuth2Properties
+    case Some(_) => S3CatalogFileIO.properties
+    case None    => S3CatalogFileIO.properties ++ IcebergCatalogCredential.oAuth2Properties
 
   override val s3CatalogFileIO: S3CatalogFileIO = S3CatalogFileIO
 
@@ -100,6 +80,13 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
         override val batchThreshold: Int        = spec.sinkSettings.orphanFilesExpirationSettings.batchThreshold
         override val retentionThreshold: String = spec.sinkSettings.orphanFilesExpirationSettings.retentionThreshold
 
+      }
+    )
+
+    override val targetAnalyzeSettings: Option[AnalyzeSettings] = Some(
+      new AnalyzeSettings {
+        override val batchThreshold: Int          = spec.sinkSettings.analyzeSettings.batchThreshold
+        override val includedColumns: Seq[String] = spec.sinkSettings.analyzeSettings.includedColumns
       }
     )
 
@@ -154,12 +141,23 @@ case class UpsertBlobStreamContext(spec: StreamSpec)
   override val sourcePath: String        = spec.sourceSettings.baseLocation
   override val tempStoragePath: String   = spec.sourceSettings.tempPath
   override val primaryKeys: List[String] = spec.sourceSettings.primaryKeys
+  override val useNameMapping: Boolean   = spec.sourceSettings.useNameMapping
+  override val sourceSchema: Option[String] =
+    if spec.sourceSettings.sourceSchema.isBlank then None
+    else Some(spec.sourceSettings.sourceSchema)
 
   val datadogSocketPath: String =
     sys.env.getOrElse("ARCANE_FRAMEWORK__DATADOG_SOCKET_PATH", "/var/run/datadog/dsd.socket")
   val metricsPublisherInterval: Duration = Duration.ofMillis(
     sys.env.getOrElse("ARCANE_FRAMEWORK__METRICS_PUBLISHER_INTERVAL_MILLIS", "100").toInt
   )
+
+  override val icebergSinkSettings: IcebergSinkSettings = new IcebergSinkSettings {
+    override val namespace: String                         = spec.sinkSettings.sinkCatalogSettings.namespace
+    override val warehouse: String                         = spec.sinkSettings.sinkCatalogSettings.warehouse
+    override val catalogUri: String                        = spec.sinkSettings.sinkCatalogSettings.catalogUri
+    override val additionalProperties: Map[String, String] = IcebergCatalogCredential.oAuth2Properties
+  }
 
 given Conversion[UpsertBlobStreamContext, DatagramSocketConfig] with
   def apply(context: UpsertBlobStreamContext): DatagramSocketConfig =
@@ -171,10 +169,10 @@ given Conversion[UpsertBlobStreamContext, MetricsConfig] with
 
 object UpsertBlobStreamContext:
 
-  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings & IcebergCatalogSettings &
-    JdbcMergeServiceClientSettings & TargetTableSettings & UpsertBlobStreamContext & TablePropertiesSettings &
-    FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & BlobSourceSettings & SourceBufferingSettings &
-    MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
+  type Environment = StreamContext & GroupingSettings & VersionedDataGraphBuilderSettings & IcebergStagingSettings &
+    JdbcMergeServiceClientSettings & SinkSettings & UpsertBlobStreamContext & TablePropertiesSettings &
+    FieldSelectionRuleSettings & BackfillSettings & StagingDataSettings & ParquetBlobSourceSettings &
+    SourceBufferingSettings & MetricsConfig & DatagramSocketConfig & DatadogPublisherConfig
 
   /** The ZLayer that creates the VersionedDataGraphBuilder.
     */
