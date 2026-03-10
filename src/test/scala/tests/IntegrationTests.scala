@@ -1,8 +1,7 @@
 package com.sneaksanddata.arcane.stream_parquet
 package tests
 
-import models.UpsertBlobStreamContext
-import models.app.StreamSpec
+import models.app.ParquetPluginStreamContext
 import tests.Common.getLatestVersion
 
 import com.sneaksanddata.arcane.framework.services.blobsource.versioning.BlobSourceWatermark
@@ -12,12 +11,9 @@ import com.sneaksanddata.arcane.framework.testkit.verifications.FrameworkVerific
   readTarget
 }
 import com.sneaksanddata.arcane.framework.testkit.zioutils.ZKit.runOrFail
-import zio.metrics.connectors.MetricsConfig
-import zio.metrics.connectors.datadog.DatadogPublisherConfig
-import zio.metrics.connectors.statsd.DatagramSocketConfig
-import zio.test.TestAspect.timeout
 import zio.test.*
-import zio.{Scope, ULayer, ZIO, ZLayer}
+import zio.test.TestAspect.timeout
+import zio.{Scope, ZIO, ZLayer}
 
 import java.time.Duration
 
@@ -112,23 +108,14 @@ object IntegrationTests extends ZIOSpecDefault:
        |  "backfillStartDate": "1735731264"
        |}""".stripMargin
 
-  private val parsedSpec = StreamSpec.fromString(streamContextStr)
+  private val streamingStreamContext = ParquetPluginStreamContext(streamContextStr)
 
-  private val streamingStreamContext = new UpsertBlobStreamContext(parsedSpec):
-    override val IsBackfilling: Boolean = false
+  // TODO: fix backfill
+  private val backfillStreamContext = ParquetPluginStreamContext(streamContextStr)
 
-  private val backfillStreamContext = new UpsertBlobStreamContext(parsedSpec):
-    override val IsBackfilling: Boolean = true
+  private val streamingStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](streamingStreamContext)
 
-  private val streamingStreamContextLayer = ZLayer.succeed[UpsertBlobStreamContext](streamingStreamContext)
-    ++ ZLayer.succeed(DatagramSocketConfig("/var/run/datadog/dsd.socket"))
-    ++ ZLayer.succeed(MetricsConfig(Duration.ofMillis(100)))
-    ++ ZLayer.succeed(DatadogPublisherConfig())
-
-  private val backfillStreamContextLayer = ZLayer.succeed[UpsertBlobStreamContext](backfillStreamContext)
-    ++ ZLayer.succeed(DatagramSocketConfig("/var/run/datadog/dsd.socket"))
-    ++ ZLayer.succeed(MetricsConfig(Duration.ofMillis(100)))
-    ++ ZLayer.succeed(DatadogPublisherConfig())
+  private val backfillStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](backfillStreamContext)
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("IntegrationTests")(
     test("runs backfill") {
@@ -137,11 +124,13 @@ object IntegrationTests extends ZIOSpecDefault:
         backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), backfillStreamContextLayer).fork
         _              <- backfillRunner.runOrFail(Duration.ofSeconds(60))
         rows <- readTarget(
-          streamingStreamContext.targetTableFullName,
+          streamingStreamContext.sink.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         ) // col0 only have 100 unique values, thus we expect 100 rows total
-        watermark <- getWatermark(streamingStreamContext.targetTableFullName.split('.').last)(BlobSourceWatermark.rw)
+        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(
+          BlobSourceWatermark.rw
+        )
         latestVersion <- getLatestVersion
       yield assertTrue(rows.size == 100) implies assertTrue(watermark.version.toLong == latestVersion)
     },
@@ -151,11 +140,13 @@ object IntegrationTests extends ZIOSpecDefault:
         _            <- streamRunner.runOrFail(Duration.ofSeconds(10))
 
         rows <- readTarget(
-          streamingStreamContext.targetTableFullName,
+          streamingStreamContext.sink.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         )
-        watermark <- getWatermark(streamingStreamContext.targetTableFullName.split('.').last)(BlobSourceWatermark.rw)
+        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(
+          BlobSourceWatermark.rw
+        )
         latestVersion <- getLatestVersion
       yield assertTrue(rows.size == 100) implies assertTrue(
         watermark.version.toLong == latestVersion
