@@ -1,0 +1,492 @@
+{{- if .Values.customResourceDefinitions.create }}
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: parquet-beta-streams.streaming.sneaksanddata.com
+spec:
+  group: streaming.sneaksanddata.com
+  scope: Namespaced
+  names:
+    plural: parquet-beta-streams
+    singular: parquet-beta-stream
+    kind: ParquetBetaStream
+    shortNames:
+      - pbstream
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+        - name: Source location
+          type: string
+          jsonPath: .spec.sourceSettings.configuration.sourcePath
+        - name: Change Capture Interval
+          type: string
+          jsonPath: .spec.streamMode.changeCapture.changeCaptureInterval
+        - name: Sink location
+          type: string
+          jsonPath: .spec.sink.targetTableFullName
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                suspended:
+                  description: Suspended indicates whether the stream is suspended.
+                  type: boolean
+                observability:
+                  type: object
+                  description: Configurations for enhancing logs and metrics produced by the plugin application
+                  properties:
+                    metricTags:
+                      type: object
+                      description: Additional tags to be assigned to all emitted metrics
+                      additionalProperties:
+                        type: string
+                      default: { }
+                  default:
+                    metricTags: { }
+                staging:
+                  type: object
+                  properties:
+                    table:
+                      type: object
+                      description: Staging table creation properties
+                      properties:
+                        stagingTablePrefix:
+                          type: string
+                        maxRowsPerFile:
+                          type: integer
+                          default: 10000
+                        stagingCatalogName:
+                          type: string
+                        stagingSchemaName:
+                          type: string
+                        isUnifiedSchema:
+                          type: boolean
+                          default: false
+                    icebergCatalog:
+                      type: object
+                      properties:
+                        catalogProperties:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        namespace:
+                          type: string
+                        catalogUri:
+                          type: string
+                        warehouse:
+                          type: string
+                streamMode:
+                  type: object
+                  description: Configuration for various modes of operation (backfill, change capture)
+                  properties:
+                    backfill:
+                      type: object
+                      description: Settings for backfill mode
+                      properties:
+                        backfillBehavior:
+                          type: string
+                          default: overwrite
+                        backfillStartDate:
+                          type: string
+                          description: |
+                            The date and time to start backfilling data from, ISO format: 2026-01-01T00:00:00Z
+                          nullable: true
+                          default: null
+                    changeCapture:
+                      type: object
+                      description: Settings for change capture mode
+                      properties:
+                        changeCaptureInterval:
+                          type: string
+                          default: 300s
+                        changeCaptureJitterVariance:
+                          type: number
+                          default: 0.1
+                        changeCaptureJitterSeed:
+                          type: number
+                          default: 0
+                sink:
+                  type: object
+                  description: Configuration for the Iceberg Sink
+                  properties:
+                    mergeServiceClient:
+                      type: object
+                      description: Merge service for the Iceberg Sink
+                      properties:
+                        extraConnectionParameters:
+                          type: object
+                          description: Additional connection parameters to attach to the final connection string
+                          additionalProperties:
+                            type: string
+                          default: {}
+                        queryRetryMaxAttempts:
+                          type: integer
+                          default: 3
+                        queryRetryScaleFactor:
+                          type: number
+                          default: 0.1
+                        queryRetryOnMessageContents:
+                          type: array
+                          items:
+                            type: string
+                          default: []
+                        queryRetryBaseDuration:
+                          type: string
+                          default: 500ms
+                        queryRetryMode:
+                          type: string
+                          default: Never
+                    targetTableProperties:
+                      type: object
+                      default:
+                        sortedBy: [ ]
+                        parquetBloomFilterColumns: [ ]
+                        format: PARQUET
+                      properties:
+                        sortedBy:
+                          type: array
+                          items:
+                            type: string
+                          default: [ ]
+                        parquetBloomFilterColumns:
+                          type: array
+                          items:
+                            type: string
+                          default: [ ]
+                        format:
+                          type: string
+                          enum:
+                            - PARQUET
+                            - ORC
+                            - AVRO
+                          default: PARQUET
+                    targetTableFullName:
+                      type: string
+                      description: Name of the target table in the Iceberg catalog. Must be fully qualified as catalog.schema.table
+                    maintenanceSettings:
+                      type: object
+                      properties:
+                        targetOrphanFilesExpirationSettings:
+                          type: object
+                          properties:
+                            batchThreshold:
+                              type: integer
+                              default: 60
+                              description: Number of batches to accumulate before triggering EXPIRE ORPHAN FILES
+                            retentionThreshold:
+                              type: string
+                              default: 6h
+                              description: Maximum age of files to keep while running this procedure
+                          default:
+                            batchThreshold: 60
+                            retentionThreshold: 6h
+                        targetSnapshotExpirationSettings:
+                          type: object
+                          properties:
+                            batchThreshold:
+                              type: integer
+                              default: 60
+                              description: Number of batches to accumulate triggering EXPIRE SNAPSHOTS
+                            retentionThreshold:
+                              type: string
+                              default: 6h
+                              description: Maximum age of records in the transaction log to keep
+                          default:
+                            batchThreshold: 60
+                            retentionThreshold: 6h
+                        targetOptimizeSettings:
+                          type: object
+                          properties:
+                            batchThreshold:
+                              type: integer
+                              default: 60
+                              description: Number of batches to accumulate before triggering the OPTIMIZE
+                            fileSizeThreshold:
+                              type: string
+                              default: 100MB
+                              description: File size to target when running OPTIMIZE
+                          default:
+                            batchThreshold: 60
+                            fileSizeThreshold: 100MB
+                        targetAnalyzeSettings:
+                          type: object
+                          description: Configuration for ANALYZE (full refresh of extended statistics on the target)
+                          properties:
+                            batchThreshold:
+                              type: integer
+                              default: 60
+                              description: Number of batches to accumulate before running the ANALYZE query.
+                            includedColumns:
+                              type: array
+                              description: Columns to include in the ANALYZE query. If empty, ALL columns will be included.
+                              items:
+                                type: string
+                              default: [ ]
+                          default:
+                            batchThreshold: 60
+                            includedColumns: [ ]
+                    icebergCatalog:
+                      type: object
+                      properties:
+                        catalogProperties:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        namespace:
+                          type: string
+                        catalogUri:
+                          type: string
+                        warehouse:
+                          type: string
+                throughput:
+                  type: object
+                  description: Configuration for throughput management controls
+                  properties:
+                    advisedChunkSize:
+                      type: integer
+                      default: 10000
+                    advisedRateChunks:
+                      type: integer
+                      default: 1
+                    advisedRatePeriod:
+                      type: string
+                      default: 15s
+                    advisedChunksBurst:
+                      type: integer
+                      default: 1
+                    shaperImpl:
+                      type: object
+                      description: Implementation of a throughput shaper
+                      properties:
+                        static:
+                          type: object
+                          nullable: true
+                          description: Static shaper
+                          default: null
+                        memoryBound:
+                          type: object
+                          description: Memory-bound shaper
+                          properties:
+                            meanStringTypeSizeEstimate:
+                              type: integer
+                              default: 500
+                            meanObjectTypeSizeEstimate:
+                              type: integer
+                              default: 4096
+                            burstEstimateDivisionFactor:
+                              type: integer
+                              default: 2
+                            rateEstimateDivisionFactor:
+                              type: integer
+                              default: 2
+                            chunkCostScale:
+                              type: integer
+                              default: 1
+                            chunkCostMax:
+                              type: integer
+                              default: 10000
+                            tableRowCountWeight:
+                              type: number
+                              default: 0.5
+                            tableSizeWeight:
+                              type: number
+                              default: 0.9
+                            tableSizeScaleFactor:
+                              type: integer
+                              default: 1
+                source:
+                  type: object
+                  properties:
+                    fieldSelectionRule:
+                      type: object
+                      description: Select a subset of fields from source
+                      default:
+                        rule:
+                          all: {}
+                      properties:
+                        isServerSide:
+                          type: boolean
+                          default: false
+                        essentialFields:
+                          type: array
+                          items:
+                            type: string
+                          default:
+                            - createdon
+                            - arcane_merge_key
+                        rule:
+                          type: object
+                          properties:
+                            all:
+                              type: object
+                              nullable: true
+                              description: Use all fields without filters.
+                              default: {}
+                            include:
+                              type: object
+                              description: Only use fields provided. You must specify mandatory fields like ARCANE_MERGE_KEY as well.
+                              nullable: true
+                              properties:
+                                fields:
+                                  type: array
+                                  items:
+                                    type: string
+                              default: null
+                            exclude:
+                              type: object
+                              description: Exclude provided fields.
+                              nullable: true
+                              properties:
+                                fields:
+                                  type: array
+                                  items:
+                                    type: string
+                              default: null
+                    buffering:
+                      type: object
+                      default:
+                        enabled: false
+                        strategy:
+                          buffered:
+                            maxBufferSize: 10000
+                      properties:
+                        enabled:
+                          type: boolean
+                          description: If `true`, source row buffering will be enabled for this stream. Note that this might lead to Out-of-Memory failures if container doesn't have enough heap space.
+                        strategy:
+                          type: object
+                          description: Buffering strategy to be applied, if enabled
+                          properties:
+                            unbounded:
+                              type: object
+                              nullable: true
+                              description: Use entire available memory as source row buffer. Only use this when you expect to always have more memory than the application might ever need.
+                              default: null
+                            buffered:
+                              type: object
+                              nullable: true
+                              description: Store up to `maxBufferSize` rows in application memory while waiting for the sink. Most preferable type of row buffering for stable operation.
+                              properties:
+                                maxBufferSize:
+                                  type: integer
+                                  default: 10000
+                    configuration:
+                      s3:
+                        usePathStyle:
+                          type: boolean
+                          default: false
+                        region:
+                          type: string
+                          default: us-east-1
+                        endpoint:
+                          type: string
+                          default: s3.amazonaws.com
+                        maxResultsPerPage:
+                          type: integer
+                          default: 1000
+                          minimum: 1
+                          maximum: 1000
+                        retryMaxAttempts:
+                          type: integer
+                          default: 5
+                          minimum: 1
+                          maximum: 10
+                        retryBaseDelay:
+                          type: number
+                          default: 0.1
+                          minimum: 0.1
+                          maximum: 1
+                        retryMaxDelay:
+                          type: number
+                          default: 1
+                          minimum: 0.2
+                          maximum: 2
+                      tempStoragePath:
+                        type: string
+                        description: Location to store temporary files
+                        default: /tmp/parquet-stream
+                      sourcePath:
+                        type: string
+                        description: Location root for Parquet files in a form of HDFS address s3a://, abfss:// etc.
+                      primaryKeys:
+                        type: array
+                        items:
+                          type: string
+                      sourceSchema:
+                        type: string
+                        description: Optional base64-encoded empty Parquet file bytes. Will be used as a schema for the source. If not provided, schema will be inferred from a random file in the source path - which may fail if the path is empty.
+                        default: ""
+                      useNameMapping:
+                        type: boolean
+                        description: |
+                          Enable column projection using field names instead of field ids: https://iceberg.apache.org/spec/?column-projection#column-projection. 
+                          This is identical to using `schema.name-mapping.default` with other Iceberg clients. Arcane with automatically generate field mapping from the source Parquet file. 
+                          Note that this might negatively interact with existing column mapping on the file, if present. 
+                          In most cases you do not need to enable this, unless a source Parquet file is written by code that doesn't assign field identifiers.
+                        default: false
+                streamConfigurationSecretRef:
+                  description: |
+                    Name of the secret containing the stream configuration credentials. Must contain a ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI key
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                jobTemplateRef:
+                  description: |
+                    Name of the job template to be used for the streaming job if stream is running in normal mode.
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    kind:
+                      type: string
+                    apiGroup:
+                      type: string
+                backfillJobTemplateRef:
+                  description: |
+                    Name of the job template to be used for the streaming job if stream is running in the backfill mode.
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    kind:
+                      type: string
+                    apiGroup:
+                      type: string
+
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                configurationHash:
+                  description: ConfigurationHash represents the hash of the current configuration.
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - status
+                      - type
+                    properties:
+                      message:
+                        type: string
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+  {{- end }}

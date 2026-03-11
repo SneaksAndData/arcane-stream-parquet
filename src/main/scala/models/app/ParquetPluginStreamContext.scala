@@ -26,6 +26,7 @@ case class ParquetPluginStreamContext(
     @key("throughput") private val throughputIn: DefaultThroughputSettings,
     override val source: ParquetStreamSourceSettings
 ) extends DefaultPluginStreamContext(observabilityIn, stagingIn, streamModeIn, sinkIn, throughputIn) derives ReadWriter:
+  // TODO: should be implemented when Operator supports overrides
   override def merge(other: Option[PluginStreamContext]): PluginStreamContext = this
 
 object ParquetPluginStreamContext:

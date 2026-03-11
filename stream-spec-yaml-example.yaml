@@ -1,0 +1,80 @@
+backfillJobTemplateRef:
+  apiGroup: streaming.sneaksanddata.com
+  kind: StreamingJobTemplate
+  name: arcane-stream-parquet-large-job
+jobTemplateRef:
+  apiGroup: streaming.sneaksanddata.com
+  kind: StreamingJobTemplate
+  name: arcane-stream-parquet-standard-job
+observability:
+  metricTags: {}
+staging:
+  table:
+    stagingTablePrefix: staging_parquet_test
+    maxRowsPerFile: 10000
+    stagingCatalogName: iceberg
+    stagingSchemaName: test
+    isUnifiedSchema: false
+  icebergCatalog:
+    catalogProperties: {}
+    catalogUri: http://localhost:20001/catalog
+    namespace: test
+    warehouse: demo
+streamMode:
+  backfill:
+    backfillBehavior: overwrite
+    backfillStartDate: "2026-01-01T00:00:00Z"
+  changeCapture:
+    changeCaptureInterval: 5s
+    changeCaptureJitterVariance: 0.1
+    changeCaptureJitterSeed: 0
+sink:
+  mergeServiceClient:
+    extraConnectionParameters:
+      client_tags: test
+  targetTableProperties:
+    format: PARQUET
+    sortedBy: []
+    parquetBloomFilterColumns: []
+  targetTableFullName: iceberg.test.parquet_test
+  maintenanceSettings:
+    targetOptimizeSettings:
+      batchThreshold: 60
+      fileSizeThreshold: 512MB
+    targetOrphanFilesExpirationSettings:
+      batchThreshold: 60
+      retentionThreshold: 6h
+    targetSnapshotExpirationSettings:
+      batchThreshold: 60
+      retentionThreshold: 6h
+    targetAnalyzeSettings:
+      includedColumns: []
+      batchThreshold: 60
+  icebergCatalog:
+    catalogProperties: {}
+    catalogUri: http://localhost:20001/catalog
+    namespace: test
+    warehouse: demo
+throughput:
+  shaperImpl:
+    memoryBound: {}
+source:
+  configuration:
+    sourcePath: s3a://s3-blob-reader
+    tempStoragePath: /tmp
+    primaryKeys:
+      - col0
+    s3:
+      usePathStyle: true
+      region: us-east-1
+      endpoint: http://localhost:9000
+      maxResultsPerPage: 1000
+      retryMaxAttempts: 5
+      retryBaseDelay: 0.1
+      retryMaxDelay: 1
+  buffering:
+    enabled: false
+    strategy:
+      unbounded: {}
+  fieldSelectionRule:
+    all: {}
