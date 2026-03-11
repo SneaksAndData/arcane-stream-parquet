@@ -32,6 +32,6 @@ case class ParquetPluginStreamContext(
 object ParquetPluginStreamContext:
   def apply(value: String): ParquetPluginStreamContext = PluginStreamContext[ParquetPluginStreamContext](value)
 
-  val layer
+  lazy val layer
       : ZLayer[Any, Throwable, PluginStreamContext & DatagramSocketConfig & MetricsConfig & DatadogPublisherConfig] =
     PluginStreamContext.getLayer[ParquetPluginStreamContext]

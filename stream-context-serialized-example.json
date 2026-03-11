@@ -29,7 +29,7 @@
   },
   "streamMode": {
     "backfill": {
-      "backfillBehavior": "overwrite",
+      "backfillBehavior": "Overwrite",
       "backfillStartDate": "2026-01-01T00:00:00Z"
     },
     "changeCapture": {
@@ -42,7 +42,12 @@
     "mergeServiceClient": {
       "extraConnectionParameters": {
         "client_tags": "test"
-      }
+      },
+      "queryRetryMode": "Never",
+      "queryRetryBaseDuration": "100ms",
+      "queryRetryOnMessageContents": [],
+      "queryRetryScaleFactor": 0.1,
+      "queryRetryMaxAttempts": 3
     },
     "targetTableProperties": {
       "format": "PARQUET",

@@ -22,106 +22,129 @@ object IntegrationTests extends ZIOSpecDefault:
 
   private val streamContextStr =
     s"""
-       |
        |{
        |  "backfillJobTemplateRef": {
        |    "apiGroup": "streaming.sneaksanddata.com",
        |    "kind": "StreamingJobTemplate",
        |    "name": "arcane-stream-parquet-large-job"
        |  },
-       |  "groupingIntervalSeconds": 1,
        |  "jobTemplateRef": {
        |    "apiGroup": "streaming.sneaksanddata.com",
        |    "kind": "StreamingJobTemplate",
        |    "name": "arcane-stream-parquet-standard-job"
        |  },
-       |  "tableProperties": {
-       |    "partitionExpressions": [],
-       |    "format": "PARQUET",
-       |    "sortedBy": [],
-       |    "parquetBloomFilterColumns": []
+       |  "observability": {
+       |    "metricTags": {}
        |  },
-       |  "rowsPerGroup": 1000,
-       |  "sinkSettings": {
-       |    "optimizeSettings": {
-       |      "batchThreshold": 60,
-       |      "fileSizeThreshold": "512MB"
+       |  "staging": {
+       |    "table": {
+       |      "stagingTablePrefix": "staging_parquet_test",
+       |      "maxRowsPerFile": 10000,
+       |      "stagingCatalogName": "iceberg",
+       |      "stagingSchemaName": "test",
+       |      "isUnifiedSchema": false
        |    },
-       |    "orphanFilesExpirationSettings": {
-       |      "batchThreshold": 60,
-       |      "retentionThreshold": "6h"
-       |    },
-       |    "snapshotExpirationSettings": {
-       |      "batchThreshold": 60,
-       |      "retentionThreshold": "6h"
-       |    },
-       |    "analyzeSettings": {
-       |      "batchThreshold": 60,
-       |      "includedColumns": []
-       |    },
-       |    "targetTableName": "$targetTableName",
-       |    "sinkCatalogSettings": {
-       |      "namespace": "test",
-       |      "warehouse": "demo",
-       |      "catalogUri": "http://localhost:20001/catalog"
-       |    }
-       |  },
-       |  "observabilitySettings": {
-       |    "metricTags": {
-       |      "key1": "value0",
-       |      "key2": "value1"
-       |    }
-       |  },
-       |  "sourceSettings": {
-       |    "changeCaptureIntervalSeconds": 5,
-       |    "baseLocation": "s3a://s3-blob-reader",
-       |    "tempPath": "/tmp",
-       |    "primaryKeys": ["col0"],
-       |    "useNameMapping": false,
-       |    "sourceSchema": "",
-       |    "s3": {
-       |      "usePathStyle": true,
-       |      "region": "us-east-1",
-       |      "endpoint": "http://localhost:9000",
-       |      "maxResultsPerPage": 150,
-       |      "retryMaxAttempts": 5,
-       |      "retryBaseDelay": 0.1,
-       |      "retryMaxDelay": 1
-       |    }
-       |  },
-       |  "stagingDataSettings": {
-       |    "catalog": {
-       |      "catalogName": "iceberg",
+       |    "icebergCatalog": {
+       |      "catalogProperties": {},
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
-       |      "schemaName": "test",
        |      "warehouse": "demo"
+       |    }
+       |  },
+       |  "streamMode": {
+       |    "backfill": {
+       |      "backfillBehavior": "Overwrite",
+       |      "backfillStartDate": "2026-01-01T00:00:00Z"
        |    },
-       |    "tableNamePrefix": "staging_parquet_test",
-       |    "maxRowsPerFile": 10000
+       |    "changeCapture": {
+       |      "changeCaptureInterval": "5s",
+       |      "changeCaptureJitterVariance": 0.1,
+       |      "changeCaptureJitterSeed": 0
+       |    }
        |  },
-       |  "fieldSelectionRule": {
-       |    "ruleType": "all",
-       |    "fields": []
+       |  "sink": {
+       |    "mergeServiceClient": {
+       |      "extraConnectionParameters": {
+       |        "client_tags": "test"
+       |      },
+       |      "queryRetryMode": "Never",
+       |      "queryRetryBaseDuration": "100ms",
+       |      "queryRetryOnMessageContents": [],
+       |      "queryRetryScaleFactor": 0.1,
+       |      "queryRetryMaxAttempts": 3
+       |    },
+       |    "targetTableProperties": {
+       |      "format": "PARQUET",
+       |      "sortedBy": [],
+       |      "parquetBloomFilterColumns": []
+       |    },
+       |    "targetTableFullName": "$targetTableName",
+       |    "maintenanceSettings": {
+       |      "targetOptimizeSettings": {
+       |        "batchThreshold": 60,
+       |        "fileSizeThreshold": "512MB"
+       |      },
+       |      "targetOrphanFilesExpirationSettings": {
+       |        "batchThreshold": 60,
+       |        "retentionThreshold": "6h"
+       |      },
+       |      "targetSnapshotExpirationSettings": {
+       |        "batchThreshold": 60,
+       |        "retentionThreshold": "6h"
+       |      },
+       |      "targetAnalyzeSettings": {
+       |        "includedColumns": [],
+       |        "batchThreshold": 60
+       |      }
+       |    },
+       |    "icebergCatalog": {
+       |      "catalogProperties": {},
+       |      "catalogUri": "http://localhost:20001/catalog",
+       |      "namespace": "test",
+       |      "warehouse": "demo"
+       |    }
        |  },
-       |  "backfillBehavior": "overwrite",
-       |  "backfillStartDate": "1735731264"
+       |  "throughput": {
+       |    "shaperImpl": {
+       |      "memoryBound": {}
+       |    }
+       |  },
+       |  "source": {
+       |    "configuration": {
+       |      "sourcePath": "s3a://s3-blob-reader",
+       |      "tempStoragePath": "/tmp",
+       |      "primaryKeys": ["col0"],
+       |      "s3": {
+       |        "usePathStyle": true,
+       |        "region": "us-east-1",
+       |        "endpoint": "http://localhost:9000",
+       |        "maxResultsPerPage": 1000,
+       |        "retryMaxAttempts": 5,
+       |        "retryBaseDelay": 0.1,
+       |        "retryMaxDelay": 1
+       |      }
+       |    },
+       |    "buffering": {
+       |      "enabled": false,
+       |      "strategy": {
+       |        "unbounded": {}
+       |      }
+       |    },
+       |    "fieldSelectionRule": {
+       |      "all": {}
+       |    }
+       |  }
        |}""".stripMargin
 
   private val streamingStreamContext = ParquetPluginStreamContext(streamContextStr)
-
-  // TODO: fix backfill
-  private val backfillStreamContext = ParquetPluginStreamContext(streamContextStr)
-
   private val streamingStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](streamingStreamContext)
-
-  private val backfillStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](backfillStreamContext)
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("IntegrationTests")(
     test("runs backfill") {
       for
+        _ <- TestSystem.putEnv("STREAMCONTEXT__BACKFILL", "true")
         _              <- ZIO.attempt(clearTarget(targetTableName))
-        backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), backfillStreamContextLayer).fork
+        backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), streamingStreamContextLayer).fork
         _              <- backfillRunner.runOrFail(Duration.ofSeconds(60))
         rows <- readTarget(
           streamingStreamContext.sink.targetTableFullName,
