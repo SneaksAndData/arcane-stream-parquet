@@ -1,52 +1,25 @@
 package com.sneaksanddata.arcane.stream_parquet
 package tests
 
-import main.appLayer
+import main.{appLayer, blobSourceLayer, s3ReaderLayer}
 import models.app.ParquetPluginStreamContext
 
 import com.sneaksanddata.arcane.framework.services.app.GenericStreamRunnerService
-import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
-  BlobSourceDataProvider,
-  BlobSourceStreamingDataProvider
-}
+import com.sneaksanddata.arcane.framework.services.blobsource.providers.{BlobSourceDataProvider, BlobSourceStreamingDataProvider}
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
-import com.sneaksanddata.arcane.framework.services.blobsource.{
-  DefaultS3Reader,
-  UpsertBlobBackfillOverwriteBatchFactory,
-  UpsertBlobHookManager
-}
+import com.sneaksanddata.arcane.framework.services.blobsource.{DefaultS3Reader, UpsertBlobBackfillOverwriteBatchFactory, UpsertBlobHookManager}
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.{
-  IcebergEntityManager,
-  IcebergS3CatalogWriter,
-  IcebergTablePropertyManager
-}
+import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergEntityManager, IcebergS3CatalogWriter, IcebergTablePropertyManager}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DeclaredMetrics}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
-import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
-  GenericBackfillStreamingMergeDataProvider,
-  GenericBackfillStreamingOverwriteDataProvider
-}
-import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
-  GenericGraphBuilderFactory,
-  GenericStreamingGraphBuilder
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
-  BackfillApplyBatchProcessor,
-  BackfillOverwriteWatermarkProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
-  DisposeBatchProcessor,
-  MergeBatchProcessor,
-  WatermarkProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
-  FieldFilteringTransformer,
-  StagingProcessor
-}
+import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{GenericBackfillStreamingMergeDataProvider, GenericBackfillStreamingOverwriteDataProvider}
+import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{GenericGraphBuilderFactory, GenericStreamingGraphBuilder}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{BackfillApplyBatchProcessor, BackfillOverwriteWatermarkProcessor}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{DisposeBatchProcessor, MergeBatchProcessor, WatermarkProcessor}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{FieldFilteringTransformer, StagingProcessor}
 import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
 import com.sneaksanddata.arcane.framework.testkit.appbuilder.TestAppBuilder.buildTestApp
 import com.sneaksanddata.arcane.framework.testkit.streaming.TimeLimitLifetimeService
@@ -59,7 +32,7 @@ import java.time.Duration
 /** Common utilities for tests.
   */
 object Common:
-
+  
   /** Builds the test application from the provided layers.
     * @param streamContextLayer
     *   The stream context layer.
@@ -73,7 +46,7 @@ object Common:
     buildTestApp(
       appLayer,
       streamContextLayer,
-      DefaultS3Reader.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration),
+      s3ReaderLayer,
       BlobSourceStreamingDataProvider.layer,
       UpsertBlobHookManager.layer,
       UpsertBlobBackfillOverwriteBatchFactory.layer
@@ -97,9 +70,7 @@ object Common:
       BackfillOverwriteWatermarkProcessor.layer,
       ZLayer.succeed(TimeLimitLifetimeService(runDuration)),
       BlobSourceDataProvider.layer,
-      BlobListingParquetSource.getLayer(context =>
-        context.asInstanceOf[ParquetPluginStreamContext].source.configuration
-      ),
+      blobSourceLayer,
       DefaultStreamBootstrapper.layer,
       ThroughputShaperBuilder.layer,
       IcebergEntityManager.sinkLayer,

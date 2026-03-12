@@ -65,7 +65,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |  "sink": {
        |    "mergeServiceClient": {
        |      "extraConnectionParameters": {
-       |        "client_tags": "test"
+       |        "clientTags": "test"
        |      },
        |      "queryRetryMode": "Never",
        |      "queryRetryBaseDuration": "100 millisecond",
@@ -130,7 +130,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "tempStoragePath": "/tmp",
        |      "primaryKeys": ["col0"],
        |      "useNameMapping": false,
-       |      "sourceSchema": "",
+       |      "sourceSchema": null,
        |      "s3": {
        |        "usePathStyle": true,
        |        "region": "us-east-1",
