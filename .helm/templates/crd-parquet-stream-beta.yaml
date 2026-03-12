@@ -402,15 +402,11 @@ spec:
                           minimum: 1
                           maximum: 10
                         retryBaseDelay:
-                          type: number
-                          default: 0.1
-                          minimum: 0.1
-                          maximum: 1
+                          type: string
+                          default: "100 millisecond"
                         retryMaxDelay:
-                          type: number
-                          default: 1
-                          minimum: 0.2
-                          maximum: 2
+                          type: string
+                          default: "1 second"
                       tempStoragePath:
                         type: string
                         description: Location to store temporary files

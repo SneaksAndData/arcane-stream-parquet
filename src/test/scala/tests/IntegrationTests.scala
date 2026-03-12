@@ -57,7 +57,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "backfillStartDate": "2026-01-01T00:00:00Z"
        |    },
        |    "changeCapture": {
-       |      "changeCaptureInterval": "5s",
+       |      "changeCaptureInterval": "5 second",
        |      "changeCaptureJitterVariance": 0.1,
        |      "changeCaptureJitterSeed": 0
        |    }
@@ -68,7 +68,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |        "client_tags": "test"
        |      },
        |      "queryRetryMode": "Never",
-       |      "queryRetryBaseDuration": "100ms",
+       |      "queryRetryBaseDuration": "100 millisecond",
        |      "queryRetryOnMessageContents": [],
        |      "queryRetryScaleFactor": 0.1,
        |      "queryRetryMaxAttempts": 3
@@ -106,32 +106,56 @@ object IntegrationTests extends ZIOSpecDefault:
        |  },
        |  "throughput": {
        |    "shaperImpl": {
-       |      "memoryBound": {}
-       |    }
+       |      "memoryBound": {
+       |        "meanStringTypeSizeEstimate": 500,
+       |        "meanObjectTypeSizeEstimate": 4096,
+       |        "burstEstimateDivisionFactor": 2,
+       |        "rateEstimateDivisionFactor": 2,
+       |        "chunkCostScale": 1,
+       |        "chunkCostMax": 10000,
+       |        "tableRowCountWeight": 0.5,
+       |        "tableSizeWeight": 0.9,
+       |        "tableSizeScaleFactor": 1
+       |      },
+       |      "static": null
+       |    },
+       |    "advisedRatePeriod": "1 second",
+       |    "advisedChunksBurst": 1,
+       |    "advisedChunkSize": 1,
+       |    "advisedRateChunks": 1
        |  },
        |  "source": {
        |    "configuration": {
        |      "sourcePath": "s3a://s3-blob-reader",
        |      "tempStoragePath": "/tmp",
        |      "primaryKeys": ["col0"],
+       |      "useNameMapping": false,
+       |      "sourceSchema": "",
        |      "s3": {
        |        "usePathStyle": true,
        |        "region": "us-east-1",
        |        "endpoint": "http://localhost:9000",
        |        "maxResultsPerPage": 1000,
        |        "retryMaxAttempts": 5,
-       |        "retryBaseDelay": 0.1,
-       |        "retryMaxDelay": 1
+       |        "retryBaseDelay": "100 millisecond",
+       |        "retryMaxDelay": "1 second"
        |      }
        |    },
        |    "buffering": {
        |      "enabled": false,
        |      "strategy": {
-       |        "unbounded": {}
+       |        "unbounded": null,
+       |        "buffered": null
        |      }
        |    },
        |    "fieldSelectionRule": {
-       |      "all": {}
+       |      "essentialFields": [],
+       |      "rule":{
+       |        "all": {},
+       |        "include": null,
+       |        "exclude": null
+       |      },
+       |      "isServerSide": false
        |    }
        |  }
        |}""".stripMargin
