@@ -1,8 +1,7 @@
 package com.sneaksanddata.arcane.stream_parquet
 package tests
 
-import models.UpsertBlobStreamContext
-import models.app.StreamSpec
+import models.app.ParquetPluginStreamContext
 import tests.Common.getLatestVersion
 
 import com.sneaksanddata.arcane.framework.services.blobsource.versioning.BlobSourceWatermark
@@ -12,12 +11,9 @@ import com.sneaksanddata.arcane.framework.testkit.verifications.FrameworkVerific
   readTarget
 }
 import com.sneaksanddata.arcane.framework.testkit.zioutils.ZKit.runOrFail
-import zio.metrics.connectors.MetricsConfig
-import zio.metrics.connectors.datadog.DatadogPublisherConfig
-import zio.metrics.connectors.statsd.DatagramSocketConfig
-import zio.test.TestAspect.timeout
 import zio.test.*
-import zio.{Scope, ULayer, ZIO, ZLayer}
+import zio.test.TestAspect.timeout
+import zio.{Scope, ZIO, ZLayer}
 
 import java.time.Duration
 
@@ -26,122 +22,162 @@ object IntegrationTests extends ZIOSpecDefault:
 
   private val streamContextStr =
     s"""
-       |
        |{
        |  "backfillJobTemplateRef": {
        |    "apiGroup": "streaming.sneaksanddata.com",
        |    "kind": "StreamingJobTemplate",
        |    "name": "arcane-stream-parquet-large-job"
        |  },
-       |  "groupingIntervalSeconds": 1,
        |  "jobTemplateRef": {
        |    "apiGroup": "streaming.sneaksanddata.com",
        |    "kind": "StreamingJobTemplate",
        |    "name": "arcane-stream-parquet-standard-job"
        |  },
-       |  "tableProperties": {
-       |    "partitionExpressions": [],
-       |    "format": "PARQUET",
-       |    "sortedBy": [],
-       |    "parquetBloomFilterColumns": []
+       |  "observability": {
+       |    "metricTags": {}
        |  },
-       |  "rowsPerGroup": 1000,
-       |  "sinkSettings": {
-       |    "optimizeSettings": {
-       |      "batchThreshold": 60,
-       |      "fileSizeThreshold": "512MB"
+       |  "staging": {
+       |    "table": {
+       |      "stagingTablePrefix": "staging_parquet_test",
+       |      "maxRowsPerFile": 10000,
+       |      "stagingCatalogName": "iceberg",
+       |      "stagingSchemaName": "test",
+       |      "isUnifiedSchema": false
        |    },
-       |    "orphanFilesExpirationSettings": {
-       |      "batchThreshold": 60,
-       |      "retentionThreshold": "6h"
-       |    },
-       |    "snapshotExpirationSettings": {
-       |      "batchThreshold": 60,
-       |      "retentionThreshold": "6h"
-       |    },
-       |    "analyzeSettings": {
-       |      "batchThreshold": 60,
-       |      "includedColumns": []
-       |    },
-       |    "targetTableName": "$targetTableName",
-       |    "sinkCatalogSettings": {
-       |      "namespace": "test",
-       |      "warehouse": "demo",
-       |      "catalogUri": "http://localhost:20001/catalog"
-       |    }
-       |  },
-       |  "observabilitySettings": {
-       |    "metricTags": {
-       |      "key1": "value0",
-       |      "key2": "value1"
-       |    }
-       |  },
-       |  "sourceSettings": {
-       |    "changeCaptureIntervalSeconds": 5,
-       |    "baseLocation": "s3a://s3-blob-reader",
-       |    "tempPath": "/tmp",
-       |    "primaryKeys": ["col0"],
-       |    "useNameMapping": false,
-       |    "sourceSchema": "",
-       |    "s3": {
-       |      "usePathStyle": true,
-       |      "region": "us-east-1",
-       |      "endpoint": "http://localhost:9000",
-       |      "maxResultsPerPage": 150,
-       |      "retryMaxAttempts": 5,
-       |      "retryBaseDelay": 0.1,
-       |      "retryMaxDelay": 1
-       |    }
-       |  },
-       |  "stagingDataSettings": {
-       |    "catalog": {
-       |      "catalogName": "iceberg",
+       |    "icebergCatalog": {
+       |      "catalogProperties": {},
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
-       |      "schemaName": "test",
        |      "warehouse": "demo"
+       |    }
+       |  },
+       |  "streamMode": {
+       |    "backfill": {
+       |      "backfillBehavior": "Overwrite",
+       |      "backfillStartDate": "2026-01-01T00:00:00Z"
        |    },
-       |    "tableNamePrefix": "staging_parquet_test",
-       |    "maxRowsPerFile": 10000
+       |    "changeCapture": {
+       |      "changeCaptureInterval": "5 second",
+       |      "changeCaptureJitterVariance": 0.1,
+       |      "changeCaptureJitterSeed": 0
+       |    }
        |  },
-       |  "fieldSelectionRule": {
-       |    "ruleType": "all",
-       |    "fields": []
+       |  "sink": {
+       |    "mergeServiceClient": {
+       |      "extraConnectionParameters": {
+       |        "clientTags": "test"
+       |      },
+       |      "queryRetryMode": "Never",
+       |      "queryRetryBaseDuration": "100 millisecond",
+       |      "queryRetryOnMessageContents": [],
+       |      "queryRetryScaleFactor": 0.1,
+       |      "queryRetryMaxAttempts": 3
+       |    },
+       |    "targetTableProperties": {
+       |      "format": "PARQUET",
+       |      "sortedBy": [],
+       |      "parquetBloomFilterColumns": []
+       |    },
+       |    "targetTableFullName": "$targetTableName",
+       |    "maintenanceSettings": {
+       |      "targetOptimizeSettings": {
+       |        "batchThreshold": 60,
+       |        "fileSizeThreshold": "512MB"
+       |      },
+       |      "targetOrphanFilesExpirationSettings": {
+       |        "batchThreshold": 60,
+       |        "retentionThreshold": "6h"
+       |      },
+       |      "targetSnapshotExpirationSettings": {
+       |        "batchThreshold": 60,
+       |        "retentionThreshold": "6h"
+       |      },
+       |      "targetAnalyzeSettings": {
+       |        "includedColumns": [],
+       |        "batchThreshold": 60
+       |      }
+       |    },
+       |    "icebergCatalog": {
+       |      "catalogProperties": {},
+       |      "catalogUri": "http://localhost:20001/catalog",
+       |      "namespace": "test",
+       |      "warehouse": "demo"
+       |    }
        |  },
-       |  "backfillBehavior": "overwrite",
-       |  "backfillStartDate": "1735731264"
+       |  "throughput": {
+       |    "shaperImpl": {
+       |      "memoryBound": {
+       |        "meanStringTypeSizeEstimate": 500,
+       |        "meanObjectTypeSizeEstimate": 4096,
+       |        "burstEstimateDivisionFactor": 2,
+       |        "rateEstimateDivisionFactor": 2,
+       |        "chunkCostScale": 4,
+       |        "chunkCostMax": 10,
+       |        "tableRowCountWeight": 0.5,
+       |        "tableSizeWeight": 0.9,
+       |        "tableSizeScaleFactor": 1
+       |      },
+       |      "static": null
+       |    },
+       |    "advisedRatePeriod": "1 second",
+       |    "advisedChunksBurst": 1,
+       |    "advisedChunkSize": 1,
+       |    "advisedRateChunks": 1
+       |  },
+       |  "source": {
+       |    "configuration": {
+       |      "sourcePath": "s3a://s3-blob-reader",
+       |      "tempStoragePath": "/tmp",
+       |      "primaryKeys": ["col0"],
+       |      "useNameMapping": false,
+       |      "sourceSchema": null,
+       |      "s3": {
+       |        "usePathStyle": true,
+       |        "region": "us-east-1",
+       |        "endpoint": "http://localhost:9000",
+       |        "maxResultsPerPage": 1000,
+       |        "retryMaxAttempts": 5,
+       |        "retryBaseDelay": "100 millisecond",
+       |        "retryMaxDelay": "1 second"
+       |      }
+       |    },
+       |    "buffering": {
+       |      "enabled": false,
+       |      "strategy": {
+       |        "unbounded": null,
+       |        "buffered": null
+       |      }
+       |    },
+       |    "fieldSelectionRule": {
+       |      "essentialFields": [],
+       |      "rule":{
+       |        "all": {},
+       |        "include": null,
+       |        "exclude": null
+       |      },
+       |      "isServerSide": false
+       |    }
+       |  }
        |}""".stripMargin
 
-  private val parsedSpec = StreamSpec.fromString(streamContextStr)
-
-  private val streamingStreamContext = new UpsertBlobStreamContext(parsedSpec):
-    override val IsBackfilling: Boolean = false
-
-  private val backfillStreamContext = new UpsertBlobStreamContext(parsedSpec):
-    override val IsBackfilling: Boolean = true
-
-  private val streamingStreamContextLayer = ZLayer.succeed[UpsertBlobStreamContext](streamingStreamContext)
-    ++ ZLayer.succeed(DatagramSocketConfig("/var/run/datadog/dsd.socket"))
-    ++ ZLayer.succeed(MetricsConfig(Duration.ofMillis(100)))
-    ++ ZLayer.succeed(DatadogPublisherConfig())
-
-  private val backfillStreamContextLayer = ZLayer.succeed[UpsertBlobStreamContext](backfillStreamContext)
-    ++ ZLayer.succeed(DatagramSocketConfig("/var/run/datadog/dsd.socket"))
-    ++ ZLayer.succeed(MetricsConfig(Duration.ofMillis(100)))
-    ++ ZLayer.succeed(DatadogPublisherConfig())
+  private val streamingStreamContext      = ParquetPluginStreamContext(streamContextStr)
+  private val streamingStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](streamingStreamContext)
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("IntegrationTests")(
     test("runs backfill") {
       for
+        _              <- TestSystem.putEnv("STREAMCONTEXT__BACKFILL", "true")
         _              <- ZIO.attempt(clearTarget(targetTableName))
-        backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), backfillStreamContextLayer).fork
+        backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), streamingStreamContextLayer).fork
         _              <- backfillRunner.runOrFail(Duration.ofSeconds(60))
         rows <- readTarget(
-          streamingStreamContext.targetTableFullName,
+          streamingStreamContext.sink.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         ) // col0 only have 100 unique values, thus we expect 100 rows total
-        watermark <- getWatermark(streamingStreamContext.targetTableFullName.split('.').last)(BlobSourceWatermark.rw)
+        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(
+          BlobSourceWatermark.rw
+        )
         latestVersion <- getLatestVersion
       yield assertTrue(rows.size == 100) implies assertTrue(watermark.version.toLong == latestVersion)
     },
@@ -151,11 +187,13 @@ object IntegrationTests extends ZIOSpecDefault:
         _            <- streamRunner.runOrFail(Duration.ofSeconds(10))
 
         rows <- readTarget(
-          streamingStreamContext.targetTableFullName,
+          streamingStreamContext.sink.targetTableFullName,
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         )
-        watermark <- getWatermark(streamingStreamContext.targetTableFullName.split('.').last)(BlobSourceWatermark.rw)
+        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(
+          BlobSourceWatermark.rw
+        )
         latestVersion <- getLatestVersion
       yield assertTrue(rows.size == 100) implies assertTrue(
         watermark.version.toLong == latestVersion

@@ -1,24 +1,26 @@
 package com.sneaksanddata.arcane.stream_parquet
 package tests
 
-import main.appLayer
-import models.{S3Reader, UpsertBlobStreamContext}
+import main.{appLayer, blobSourceLayer, s3ReaderLayer}
+import models.app.ParquetPluginStreamContext
 
 import com.sneaksanddata.arcane.framework.services.app.GenericStreamRunnerService
-import com.sneaksanddata.arcane.framework.services.app.base.{InterruptionToken, StreamLifetimeService}
 import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
   BlobSourceDataProvider,
   BlobSourceStreamingDataProvider
 }
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
-import com.sneaksanddata.arcane.framework.services.blobsource.versioning.BlobSourceWatermark
 import com.sneaksanddata.arcane.framework.services.blobsource.{
   UpsertBlobBackfillOverwriteBatchFactory,
   UpsertBlobHookManager
 }
-import com.sneaksanddata.arcane.framework.services.caching.schema_cache.MutableSchemaCache
+import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergS3CatalogWriter, IcebergTablePropertyManager}
+import com.sneaksanddata.arcane.framework.services.iceberg.{
+  IcebergEntityManager,
+  IcebergS3CatalogWriter,
+  IcebergTablePropertyManager
+}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DeclaredMetrics}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
@@ -31,7 +33,6 @@ import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
   GenericGraphBuilderFactory,
   GenericStreamingGraphBuilder
 }
-import com.sneaksanddata.arcane.framework.services.streaming.processors.GenericGroupingTransformer
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
   BackfillApplyBatchProcessor,
   BackfillOverwriteWatermarkProcessor
@@ -45,12 +46,13 @@ import com.sneaksanddata.arcane.framework.services.streaming.processors.transfor
   FieldFilteringTransformer,
   StagingProcessor
 }
+import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
 import com.sneaksanddata.arcane.framework.testkit.appbuilder.TestAppBuilder.buildTestApp
 import com.sneaksanddata.arcane.framework.testkit.streaming.TimeLimitLifetimeService
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import zio.{ULayer, ZIO, ZLayer}
 
-import java.sql.{DriverManager, ResultSet}
+import java.sql.ResultSet
 import java.time.Duration
 
 /** Common utilities for tests.
@@ -65,19 +67,18 @@ object Common:
     */
   def getTestApp(
       runDuration: Duration,
-      streamContextLayer: ZLayer[Any, Nothing, UpsertBlobStreamContext.Environment]
+      streamContextLayer: ZLayer[Any, Nothing, ParquetPluginStreamContext]
   ): ZIO[Any, Throwable, Unit] =
     buildTestApp(
       appLayer,
       streamContextLayer,
-      S3Reader.layer,
+      s3ReaderLayer,
       BlobSourceStreamingDataProvider.layer,
       UpsertBlobHookManager.layer,
       UpsertBlobBackfillOverwriteBatchFactory.layer
     )(
       GenericStreamRunnerService.layer,
       GenericGraphBuilderFactory.composedLayer,
-      GenericGroupingTransformer.layer,
       DisposeBatchProcessor.layer,
       FieldFilteringTransformer.layer,
       MergeBatchProcessor.layer,
@@ -85,7 +86,6 @@ object Common:
       FieldsFilteringService.layer,
       IcebergS3CatalogWriter.layer,
       JdbcMergeServiceClient.layer,
-      ZLayer.succeed(MutableSchemaCache()),
       BackfillApplyBatchProcessor.layer,
       GenericBackfillStreamingOverwriteDataProvider.layer,
       GenericBackfillStreamingMergeDataProvider.layer,
@@ -94,10 +94,15 @@ object Common:
       ArcaneDimensionsProvider.layer,
       WatermarkProcessor.layer,
       BackfillOverwriteWatermarkProcessor.layer,
-      IcebergTablePropertyManager.layer,
       ZLayer.succeed(TimeLimitLifetimeService(runDuration)),
       BlobSourceDataProvider.layer,
-      BlobListingParquetSource.layer
+      blobSourceLayer,
+      DefaultStreamBootstrapper.layer,
+      ThroughputShaperBuilder.layer,
+      IcebergEntityManager.sinkLayer,
+      IcebergEntityManager.stagingLayer,
+      IcebergTablePropertyManager.stagingLayer,
+      IcebergTablePropertyManager.sinkLayer
     )
 
   val TargetDecoder: ResultSet => (Long, String, Long, String, Long, String, Long, String, Long, String, String, Long) =

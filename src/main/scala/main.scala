@@ -1,9 +1,10 @@
 package com.sneaksanddata.arcane.stream_parquet
 
-import models.{S3Reader, UpsertBlobStreamContext}
+import models.app.ParquetPluginStreamContext
 
 import com.sneaksanddata.arcane.framework.exceptions.StreamFailException
 import com.sneaksanddata.arcane.framework.logging.ZIOLogAnnotations.zlog
+import com.sneaksanddata.arcane.framework.models.app.PluginStreamContext
 import com.sneaksanddata.arcane.framework.services.app.base.StreamRunnerService
 import com.sneaksanddata.arcane.framework.services.app.{GenericStreamRunnerService, PosixStreamLifetimeService}
 import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
@@ -12,14 +13,21 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
 }
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
 import com.sneaksanddata.arcane.framework.services.blobsource.{
+  DefaultS3Reader,
   UpsertBlobBackfillOverwriteBatchFactory,
   UpsertBlobHookManager
 }
-import com.sneaksanddata.arcane.framework.services.caching.schema_cache.MutableSchemaCache
+import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergS3CatalogWriter, IcebergTablePropertyManager}
+import com.sneaksanddata.arcane.framework.services.iceberg.{
+  IcebergEntityManager,
+  IcebergS3CatalogWriter,
+  IcebergSinkEntityManager,
+  IcebergTablePropertyManager
+}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DataDog, DeclaredMetrics}
+import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3StoragePath
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
 import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
   GenericBackfillStreamingMergeDataProvider,
@@ -29,7 +37,6 @@ import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
   GenericGraphBuilderFactory,
   GenericStreamingGraphBuilder
 }
-import com.sneaksanddata.arcane.framework.services.streaming.processors.GenericGroupingTransformer
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
   BackfillApplyBatchProcessor,
   BackfillOverwriteWatermarkProcessor
@@ -43,8 +50,10 @@ import com.sneaksanddata.arcane.framework.services.streaming.processors.transfor
   FieldFilteringTransformer,
   StagingProcessor
 }
+import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
 import zio.*
 import zio.logging.backend.SLF4J
+import zio.metrics.jvm.DefaultJvmMetrics
 
 object main extends ZIOAppDefault {
 
@@ -56,7 +65,11 @@ object main extends ZIOAppDefault {
     _            <- streamRunner.run
   yield ()
 
-  private val schemaCache = MutableSchemaCache()
+  val blobSourceLayer
+      : ZLayer[S3BlobStorageReader & PluginStreamContext, Throwable, BlobListingParquetSource[S3StoragePath]] =
+    BlobListingParquetSource.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration)
+  val s3ReaderLayer: ZLayer[PluginStreamContext, Nothing, S3BlobStorageReader] =
+    DefaultS3Reader.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration)
 
   private def getExitCode(exception: Throwable): zio.ExitCode =
     exception match
@@ -66,7 +79,6 @@ object main extends ZIOAppDefault {
   private lazy val streamRunner = appLayer.provide(
     GenericStreamRunnerService.layer,
     GenericGraphBuilderFactory.composedLayer,
-    GenericGroupingTransformer.layer,
     DisposeBatchProcessor.layer,
     FieldFilteringTransformer.layer,
     MergeBatchProcessor.layer,
@@ -75,11 +87,15 @@ object main extends ZIOAppDefault {
     PosixStreamLifetimeService.layer,
     BlobSourceStreamingDataProvider.layer,
     UpsertBlobBackfillOverwriteBatchFactory.layer,
-    S3Reader.layer,
-    BlobListingParquetSource.layer,
+    s3ReaderLayer,
+    blobSourceLayer,
     BlobSourceDataProvider.layer,
-    UpsertBlobStreamContext.layer,
+    ParquetPluginStreamContext.layer,
     IcebergS3CatalogWriter.layer,
+    IcebergEntityManager.sinkLayer,
+    IcebergEntityManager.stagingLayer,
+    IcebergTablePropertyManager.stagingLayer,
+    IcebergTablePropertyManager.sinkLayer,
     JdbcMergeServiceClient.layer,
     UpsertBlobHookManager.layer,
     BackfillApplyBatchProcessor.layer,
@@ -89,10 +105,11 @@ object main extends ZIOAppDefault {
     DeclaredMetrics.layer,
     ArcaneDimensionsProvider.layer,
     DataDog.UdsPublisher.layer,
-    ZLayer.succeed(schemaCache),
     WatermarkProcessor.layer,
     BackfillOverwriteWatermarkProcessor.layer,
-    IcebergTablePropertyManager.layer
+    DefaultStreamBootstrapper.layer,
+    ThroughputShaperBuilder.layer,
+    DefaultJvmMetrics.liveV2.unit
   )
 
   @main
