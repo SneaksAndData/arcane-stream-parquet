@@ -111,8 +111,8 @@ object IntegrationTests extends ZIOSpecDefault:
        |        "meanObjectTypeSizeEstimate": 4096,
        |        "burstEstimateDivisionFactor": 2,
        |        "rateEstimateDivisionFactor": 2,
-       |        "chunkCostScale": 1,
-       |        "chunkCostMax": 10000,
+       |        "chunkCostScale": 4,
+       |        "chunkCostMax": 10,
        |        "tableRowCountWeight": 0.5,
        |        "tableSizeWeight": 0.9,
        |        "tableSizeScaleFactor": 1
@@ -160,13 +160,13 @@ object IntegrationTests extends ZIOSpecDefault:
        |  }
        |}""".stripMargin
 
-  private val streamingStreamContext = ParquetPluginStreamContext(streamContextStr)
+  private val streamingStreamContext      = ParquetPluginStreamContext(streamContextStr)
   private val streamingStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](streamingStreamContext)
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("IntegrationTests")(
     test("runs backfill") {
       for
-        _ <- TestSystem.putEnv("STREAMCONTEXT__BACKFILL", "true")
+        _              <- TestSystem.putEnv("STREAMCONTEXT__BACKFILL", "true")
         _              <- ZIO.attempt(clearTarget(targetTableName))
         backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), streamingStreamContextLayer).fork
         _              <- backfillRunner.runOrFail(Duration.ofSeconds(60))

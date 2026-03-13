@@ -11,7 +11,6 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
 }
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
 import com.sneaksanddata.arcane.framework.services.blobsource.{
-  DefaultS3Reader,
   UpsertBlobBackfillOverwriteBatchFactory,
   UpsertBlobHookManager
 }
