@@ -19,13 +19,16 @@ spec:
       additionalPrinterColumns:
         - name: Source location
           type: string
-          jsonPath: .spec.sourceSettings.configuration.sourcePath
+          jsonPath: .spec.source.configuration.sourcePath
         - name: Change Capture Interval
           type: string
           jsonPath: .spec.streamMode.changeCapture.changeCaptureInterval
         - name: Sink location
           type: string
           jsonPath: .spec.sink.targetTableFullName
+        - name: Throughput shaper
+          type: string
+          jsonPath: .spec.throughput.shaperImpl
         - name: Phase
           type: string
           jsonPath: .status.phase
