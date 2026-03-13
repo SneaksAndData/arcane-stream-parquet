@@ -62,29 +62,39 @@ spec:
                       properties:
                         stagingTablePrefix:
                           type: string
+                          description: Prefix to use for staging table names
                         maxRowsPerFile:
                           type: integer
+                          description: Maximum number of rows to pack into a single staging table
                           default: 10000
                         stagingCatalogName:
+                          description: Name of a Trino catalog used for staging
                           type: string
                         stagingSchemaName:
+                          description: Schema name to use in the staging catalog
                           type: string
                         isUnifiedSchema:
+                          description: Set to true to disable automatic schema migrations between stage and target.
                           type: boolean
                           default: false
                     icebergCatalog:
                       type: object
+                      description: Iceberg REST Catalog connection properties
                       properties:
                         catalogProperties:
+                          description: Additional configurations for the catalog sessions. Refer to Iceberg documentation for what can be provided here.
                           type: object
                           additionalProperties:
                             type: string
                         namespace:
                           type: string
+                          description: Catalog namespace to use for all sessions
                         catalogUri:
                           type: string
+                          description: Catalog server URL
                         warehouse:
                           type: string
+                          description: Catalog warehouse to use for all sessions
                 streamMode:
                   type: object
                   description: Configuration for various modes of operation (backfill, change capture)
@@ -95,7 +105,7 @@ spec:
                       properties:
                         backfillBehavior:
                           type: string
-                          default: overwrite
+                          default: Merge
                         backfillStartDate:
                           type: string
                           description: |
@@ -108,7 +118,7 @@ spec:
                       properties:
                         changeCaptureInterval:
                           type: string
-                          default: 300s
+                          default: 300 second
                         changeCaptureJitterVariance:
                           type: number
                           default: 0.1
@@ -142,12 +152,13 @@ spec:
                           default: []
                         queryRetryBaseDuration:
                           type: string
-                          default: 500ms
+                          default: 500 millisecond
                         queryRetryMode:
                           type: string
                           default: Never
                     targetTableProperties:
                       type: object
+                      description: Additional configurations like partitioning, sort order etc. for a target table. These are not supported until 2.3 framework release.
                       default:
                         sortedBy: [ ]
                         parquetBloomFilterColumns: [ ]
@@ -172,7 +183,7 @@ spec:
                           default: PARQUET
                     targetTableFullName:
                       type: string
-                      description: Name of the target table in the Iceberg catalog. Must be fully qualified as catalog.schema.table
+                      description: Name of the target table in the Iceberg catalog. Must be fully qualified as `catalog.schema.table`
                     maintenanceSettings:
                       type: object
                       properties:
@@ -224,7 +235,7 @@ spec:
                           properties:
                             batchThreshold:
                               type: integer
-                              default: 60
+                              default: 180
                               description: Number of batches to accumulate before running the ANALYZE query.
                             includedColumns:
                               type: array
@@ -233,7 +244,7 @@ spec:
                                 type: string
                               default: [ ]
                           default:
-                            batchThreshold: 60
+                            batchThreshold: 180
                             includedColumns: [ ]
                     icebergCatalog:
                       type: object
@@ -251,58 +262,83 @@ spec:
                 throughput:
                   type: object
                   description: Configuration for throughput management controls
+                  default:
+                    advisedChunkSize: 10000
+                    advisedRateChunks: 1
+                    advisedRatePeriod: 15 second
+                    advisedChunksBurst: 1
+                    shaperImpl:
+                      static: {}
+                      memoryBound: null
                   properties:
                     advisedChunkSize:
                       type: integer
+                      description: Chunk size orientation to the stream throughput management engine. For all shapers except Static, this setting is treated as a computation baseline.
                       default: 10000
                     advisedRateChunks:
                       type: integer
+                      description: Chunk emission rate, elements. For all shapers except Static, this setting is treated as a computation baseline.
                       default: 1
                     advisedRatePeriod:
                       type: string
-                      default: 15s
+                      description: Chunk emission rate, period. For all shapers except Static, this setting is treated as a computation baseline.
+                      default: 15 seconds
                     advisedChunksBurst:
                       type: integer
+                      description: Chunk burst. For all shapers except Static, this setting is treated as a computation baseline.
                       default: 1
                     shaperImpl:
                       type: object
                       description: Implementation of a throughput shaper
+                      default:
+                        static: {}
+                        memoryBound: null
                       properties:
                         static:
                           type: object
                           nullable: true
-                          description: Static shaper
-                          default: null
+                          description: Enables StaticShaper, which provides fixed throughput according to advised values.
+                          default: {}
                         memoryBound:
                           type: object
-                          description: Memory-bound shaper
+                          nullable: true
+                          description: Enables MemoryBoundShaper, which updates throughput based on available free memory vs chunk size, using sigmoid function for cost estimation. Advised values are used as a fallback and computation baseline.
                           properties:
                             meanStringTypeSizeEstimate:
                               type: integer
                               default: 500
+                              description: Mean length of a string or varchar data field in the source.
                             meanObjectTypeSizeEstimate:
                               type: integer
                               default: 4096
+                              description: Mean size of a binary data field in the source.
                             burstEstimateDivisionFactor:
                               type: integer
+                              description: Affects the height of a chunk burst value estimation curve. Higher values result in a more conservative (lower) burst value estimations.
                               default: 2
                             rateEstimateDivisionFactor:
                               type: integer
+                              description: Affects the height of a chunk rate estimation curve. Higher values result in a more conservative (lower) burst value estimations.
                               default: 2
                             chunkCostScale:
                               type: integer
+                              description: Scale for the chunk cost sigmoid estimator. Higher values result in less even distribution, leading to a more significant slowdown of larger chunks compared to smaller ones.
                               default: 1
                             chunkCostMax:
                               type: integer
-                              default: 10000
+                              description: Maximum cost that can be assigned to any chunk. Setting this to 1 will result in all chunks cost 0 or 1. Increasing this value will lead to a more noticeable slowdown for streams with large chunks.
+                              default: 10
                             tableRowCountWeight:
                               type: number
+                              description: Weight of a table row's count in cost estimation.
                               default: 0.5
                             tableSizeWeight:
                               type: number
-                              default: 0.9
+                              description: Weight of a table's physical size in bytes in cost estimation.
+                              default: 0.5
                             tableSizeScaleFactor:
                               type: integer
+                              description: Scale for the memory cutoff sigmoid estimator. This affects how much memory is considered reserved when estimating chunk sizes. Higher values will result in more conservative cutoffs for large tables.
                               default: 1
                 source:
                   type: object
@@ -313,9 +349,12 @@ spec:
                       default:
                         rule:
                           all: {}
+                          include: null
+                          exclude: null
                       properties:
                         isServerSide:
                           type: boolean
+                          description: If set to true, indicates that a source can provide field selection. This disables field filtering on the application level and relies on a source-specific filtering query instead.
                           default: false
                         essentialFields:
                           type: array
@@ -355,8 +394,9 @@ spec:
                     buffering:
                       type: object
                       default:
-                        enabled: false
+                        enabled: true
                         strategy:
+                          unbounded: null
                           buffered:
                             maxBufferSize: 10000
                       properties:
@@ -420,8 +460,9 @@ spec:
                           type: string
                       sourceSchema:
                         type: string
+                        nullable: true
                         description: Optional base64-encoded empty Parquet file bytes. Will be used as a schema for the source. If not provided, schema will be inferred from a random file in the source path - which may fail if the path is empty.
-                        default: ""
+                        default: null
                       useNameMapping:
                         type: boolean
                         description: |
