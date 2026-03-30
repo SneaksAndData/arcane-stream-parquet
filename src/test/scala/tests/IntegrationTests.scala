@@ -48,7 +48,8 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "catalogProperties": {},
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
-       |      "warehouse": "demo"
+       |      "warehouse": "demo",
+       |      "maxCatalogInstanceLifetime": "3600 second"
        |    }
        |  },
        |  "streamMode": {
@@ -101,7 +102,8 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "catalogProperties": {},
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
-       |      "warehouse": "demo"
+       |      "warehouse": "demo",
+       |      "maxCatalogInstanceLifetime": "3600 second"
        |    }
        |  },
        |  "throughput": {
@@ -111,17 +113,17 @@ object IntegrationTests extends ZIOSpecDefault:
        |        "meanObjectTypeSizeEstimate": 4096,
        |        "burstEstimateDivisionFactor": 2,
        |        "rateEstimateDivisionFactor": 2,
-       |        "chunkCostScale": 4,
+       |        "chunkCostScale": 1,
        |        "chunkCostMax": 10,
-       |        "tableRowCountWeight": 0.5,
-       |        "tableSizeWeight": 0.9,
+       |        "tableRowCountWeight": 0.05,
+       |        "tableSizeWeight": 0.09,
        |        "tableSizeScaleFactor": 1
        |      }
        |    },
        |    "advisedRatePeriod": "1 second",
-       |    "advisedChunksBurst": 1,
-       |    "advisedChunkSize": 1,
-       |    "advisedRateChunks": 1
+       |    "advisedChunksBurst": 1000,
+       |    "advisedChunkSize": 10,
+       |    "advisedRateChunks": 1000
        |  },
        |  "source": {
        |    "configuration": {
