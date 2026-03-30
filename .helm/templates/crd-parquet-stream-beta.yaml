@@ -98,6 +98,10 @@ spec:
                         warehouse:
                           type: string
                           description: Catalog warehouse to use for all sessions
+                        maxCatalogInstanceLifetime:
+                          type: string
+                          description: Lifetime of RESTSessionCatalog instances
+                          default: 3500 second
                 streamMode:
                   type: object
                   description: Configuration for various modes of operation (backfill, change capture)
@@ -262,6 +266,10 @@ spec:
                           type: string
                         warehouse:
                           type: string
+                        maxCatalogInstanceLifetime:
+                          type: string
+                          description: Lifetime of RESTSessionCatalog instances
+                          default: 3500 second
                 throughput:
                   type: object
                   description: Configuration for throughput management controls
