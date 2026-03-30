@@ -116,8 +116,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |        "tableRowCountWeight": 0.5,
        |        "tableSizeWeight": 0.9,
        |        "tableSizeScaleFactor": 1
-       |      },
-       |      "static": null
+       |      }
        |    },
        |    "advisedRatePeriod": "1 second",
        |    "advisedChunksBurst": 1,
@@ -129,8 +128,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "sourcePath": "s3a://s3-blob-reader",
        |      "tempStoragePath": "/tmp",
        |      "primaryKeys": ["col0"],
-       |      "useNameMapping": false,
-       |      "sourceSchema": null,
+       |      "useNameMapping": false
        |      "s3": {
        |        "usePathStyle": true,
        |        "region": "us-east-1",
@@ -143,17 +141,12 @@ object IntegrationTests extends ZIOSpecDefault:
        |    },
        |    "buffering": {
        |      "enabled": false,
-       |      "strategy": {
-       |        "unbounded": null,
-       |        "buffered": null
-       |      }
+       |      "strategy": {}
        |    },
        |    "fieldSelectionRule": {
        |      "essentialFields": [],
        |      "rule":{
-       |        "all": {},
-       |        "include": null,
-       |        "exclude": null
+       |        "all": {}
        |      },
        |      "isServerSide": false
        |    }

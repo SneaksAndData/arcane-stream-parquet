@@ -424,56 +424,61 @@ spec:
                                   type: integer
                                   default: 10000
                     configuration:
-                      s3:
-                        usePathStyle:
+                      type: object
+                      description: Connection details for blob source
+                      properties:
+                        s3:
+                          type: object
+                          description: S3 source connection properties
+                          usePathStyle:
+                            type: boolean
+                            default: false
+                          region:
+                            type: string
+                            default: us-east-1
+                          endpoint:
+                            type: string
+                            default: s3.amazonaws.com
+                          maxResultsPerPage:
+                            type: integer
+                            default: 1000
+                            minimum: 1
+                            maximum: 1000
+                          retryMaxAttempts:
+                            type: integer
+                            default: 5
+                            minimum: 1
+                            maximum: 10
+                          retryBaseDelay:
+                            type: string
+                            default: "100 millisecond"
+                          retryMaxDelay:
+                            type: string
+                            default: "1 second"
+                        tempStoragePath:
+                          type: string
+                          description: Location to store temporary files
+                          default: /tmp/parquet-stream
+                        sourcePath:
+                          type: string
+                          description: Location root for Parquet files in a form of HDFS address s3a://, abfss:// etc.
+                        primaryKeys:
+                          type: array
+                          items:
+                            type: string
+                        sourceSchema:
+                          type: string
+                          nullable: true
+                          description: Optional base64-encoded empty Parquet file bytes. Will be used as a schema for the source. If not provided, schema will be inferred from a random file in the source path - which may fail if the path is empty.
+                          default: null
+                        useNameMapping:
                           type: boolean
+                          description: |
+                            Enable column projection using field names instead of field ids: https://iceberg.apache.org/spec/?column-projection#column-projection. 
+                            This is identical to using `schema.name-mapping.default` with other Iceberg clients. Arcane with automatically generate field mapping from the source Parquet file. 
+                            Note that this might negatively interact with existing column mapping on the file, if present. 
+                            In most cases you do not need to enable this, unless a source Parquet file is written by code that doesn't assign field identifiers.
                           default: false
-                        region:
-                          type: string
-                          default: us-east-1
-                        endpoint:
-                          type: string
-                          default: s3.amazonaws.com
-                        maxResultsPerPage:
-                          type: integer
-                          default: 1000
-                          minimum: 1
-                          maximum: 1000
-                        retryMaxAttempts:
-                          type: integer
-                          default: 5
-                          minimum: 1
-                          maximum: 10
-                        retryBaseDelay:
-                          type: string
-                          default: "100 millisecond"
-                        retryMaxDelay:
-                          type: string
-                          default: "1 second"
-                      tempStoragePath:
-                        type: string
-                        description: Location to store temporary files
-                        default: /tmp/parquet-stream
-                      sourcePath:
-                        type: string
-                        description: Location root for Parquet files in a form of HDFS address s3a://, abfss:// etc.
-                      primaryKeys:
-                        type: array
-                        items:
-                          type: string
-                      sourceSchema:
-                        type: string
-                        nullable: true
-                        description: Optional base64-encoded empty Parquet file bytes. Will be used as a schema for the source. If not provided, schema will be inferred from a random file in the source path - which may fail if the path is empty.
-                        default: null
-                      useNameMapping:
-                        type: boolean
-                        description: |
-                          Enable column projection using field names instead of field ids: https://iceberg.apache.org/spec/?column-projection#column-projection. 
-                          This is identical to using `schema.name-mapping.default` with other Iceberg clients. Arcane with automatically generate field mapping from the source Parquet file. 
-                          Note that this might negatively interact with existing column mapping on the file, if present. 
-                          In most cases you do not need to enable this, unless a source Parquet file is written by code that doesn't assign field identifiers.
-                        default: false
                 streamConfigurationSecretRef:
                   description: |
                     Name of the secret containing the stream configuration credentials. Must contain a ARCANE_FRAMEWORK__MERGE_SERVICE_CONNECTION_URI key
