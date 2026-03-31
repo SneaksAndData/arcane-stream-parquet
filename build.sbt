@@ -25,7 +25,7 @@ lazy val plugin = (project in file("."))
     name := "arcane-stream-parquet",
     idePackagePrefix := Some("com.sneaksanddata.arcane.stream_parquet"),
 
-    libraryDependencies += "com.sneaksanddata" % "arcane-framework_3" % "2.1.1-65-g3c305d3",
+    libraryDependencies += "com.sneaksanddata" % "arcane-framework_3" % "2.1.1-66-g96b3f80",
     libraryDependencies += "io.netty" % "netty-tcnative-boringssl-static" % "2.0.74.Final",
 
     // bugfix for upgrade header
