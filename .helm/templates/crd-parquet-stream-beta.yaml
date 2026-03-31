@@ -438,31 +438,32 @@ spec:
                         s3:
                           type: object
                           description: S3 source connection properties
-                          usePathStyle:
-                            type: boolean
-                            default: false
-                          region:
-                            type: string
-                            default: us-east-1
-                          endpoint:
-                            type: string
-                            default: s3.amazonaws.com
-                          maxResultsPerPage:
-                            type: integer
-                            default: 1000
-                            minimum: 1
-                            maximum: 1000
-                          retryMaxAttempts:
-                            type: integer
-                            default: 5
-                            minimum: 1
-                            maximum: 10
-                          retryBaseDelay:
-                            type: string
-                            default: "100 millisecond"
-                          retryMaxDelay:
-                            type: string
-                            default: "1 second"
+                          properties:
+                            usePathStyle:
+                              type: boolean
+                              default: false
+                            region:
+                              type: string
+                              default: us-east-1
+                            endpoint:
+                              type: string
+                              default: s3.amazonaws.com
+                            maxResultsPerPage:
+                              type: integer
+                              default: 1000
+                              minimum: 1
+                              maximum: 1000
+                            retryMaxAttempts:
+                              type: integer
+                              default: 5
+                              minimum: 1
+                              maximum: 10
+                            retryBaseDelay:
+                              type: string
+                              default: "100 millisecond"
+                            retryMaxDelay:
+                              type: string
+                              default: "1 second"
                         tempStoragePath:
                           type: string
                           description: Location to store temporary files
