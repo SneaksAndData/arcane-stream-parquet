@@ -130,7 +130,6 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "sourcePath": "s3a://s3-blob-reader",
        |      "tempStoragePath": "/tmp",
        |      "primaryKeys": ["col0"],
-       |      "sourceSchema": "",
        |      "useNameMapping": false,
        |      "s3": {
        |        "usePathStyle": true,
