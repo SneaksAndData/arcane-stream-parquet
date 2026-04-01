@@ -10,7 +10,7 @@ import com.sneaksanddata.arcane.framework.testkit.verifications.FrameworkVerific
   getWatermark,
   readTarget
 }
-import com.sneaksanddata.arcane.framework.testkit.zioutils.ZKit.runOrFail
+import com.sneaksanddata.arcane.framework.testkit.zioutils.ZKit.{liveSeed, runOrFail}
 import zio.test.*
 import zio.test.TestAspect.timeout
 import zio.{Scope, ZIO, ZLayer}
@@ -194,4 +194,6 @@ object IntegrationTests extends ZIOSpecDefault:
         watermark.version.toLong == latestVersion
       ) // no new rows added after stream has started
     }
-  ) @@ timeout(zio.Duration.fromSeconds(180)) @@ TestAspect.withLiveClock @@ TestAspect.sequential
+  ) @@ timeout(zio.Duration.fromSeconds(180)) @@ TestAspect.withLiveClock @@ TestAspect.sequential @@ TestAspect.before(
+    liveSeed
+  )
