@@ -26,7 +26,7 @@ import com.sneaksanddata.arcane.framework.services.iceberg.{
   IcebergTablePropertyManager
 }
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
-import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DataDog, DeclaredMetrics}
+import com.sneaksanddata.arcane.framework.services.metrics.{DataDog, DeclaredMetrics, GlobalMetricTagProvider}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3StoragePath
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
 import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
@@ -103,7 +103,7 @@ object main extends ZIOAppDefault {
     GenericBackfillStreamingMergeDataProvider.layer,
     GenericStreamingGraphBuilder.backfillSubStreamLayer,
     DeclaredMetrics.layer,
-    ArcaneDimensionsProvider.layer,
+    GlobalMetricTagProvider.layer,
     DataDog.UdsPublisher.layer,
     WatermarkProcessor.layer,
     BackfillOverwriteWatermarkProcessor.layer,

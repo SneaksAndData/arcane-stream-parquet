@@ -41,6 +41,10 @@
   },
   "sink": {
     "mergeServiceClient": {
+      "connectionUrl": "jdbc:trino://localhost:8080",
+      "credentialType": {
+        "basic": {}
+      },
       "extraConnectionParameters": {
         "clientTags": "test"
       },

@@ -22,7 +22,7 @@ import com.sneaksanddata.arcane.framework.services.iceberg.{
   IcebergTablePropertyManager
 }
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
-import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DeclaredMetrics}
+import com.sneaksanddata.arcane.framework.services.metrics.{DeclaredMetrics, GlobalMetricTagProvider}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
 import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
@@ -91,7 +91,7 @@ object Common:
       GenericBackfillStreamingMergeDataProvider.layer,
       GenericStreamingGraphBuilder.backfillSubStreamLayer,
       DeclaredMetrics.layer,
-      ArcaneDimensionsProvider.layer,
+      GlobalMetricTagProvider.layer,
       WatermarkProcessor.layer,
       BackfillOverwriteWatermarkProcessor.layer,
       ZLayer.succeed(TimeLimitLifetimeService(runDuration)),
