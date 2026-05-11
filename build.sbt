@@ -1,6 +1,6 @@
 import com.typesafe.sbt.packager.graalvmnativeimage.GraalVMNativeImagePlugin.autoImport.GraalVMNativeImage
 
-ThisBuild / version := "2.3.0-SNAPSHOT"
+ThisBuild / version := "2.3.1-SNAPSHOT"
 ThisBuild / trackInternalDependencies := TrackLevel.TrackIfMissing
 ThisBuild / exportJars := true
 ThisBuild / scalaVersion := "3.8.3"

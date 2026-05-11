@@ -147,7 +147,8 @@ spec:
                           type: object
                           description: Credential to use when connecting to a Trino cluster
                           default:
-                            basic: {}
+                            basic: null
+                            anonymous: null
                           properties:
                             basic:
                               type: object
@@ -316,7 +317,7 @@ spec:
                     advisedRatePeriod: 15 second
                     advisedChunksBurst: 1
                     shaperImpl:
-                      static: {}
+                      static: null
                       memoryBound: null
                   properties:
                     advisedChunkSize:
@@ -335,14 +336,14 @@ spec:
                       type: object
                       description: Implementation of a throughput shaper
                       default:
-                        static: {}
+                        static: null
                         memoryBound: null
                       properties:
                         static:
                           type: object
                           nullable: true
                           description: Enables StaticShaper, which provides fixed throughput according to advised values.
-                          default: {}
+                          default: null
                         memoryBound:
                           type: object
                           nullable: true
