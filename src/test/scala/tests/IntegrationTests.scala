@@ -65,6 +65,10 @@ object IntegrationTests extends ZIOSpecDefault:
        |  },
        |  "sink": {
        |    "mergeServiceClient": {
+       |      "connectionUrl": "jdbc:trino://localhost:8080",
+       |      "credentialType": {
+       |        "basic": {}
+       |      },
        |      "extraConnectionParameters": {
        |        "clientTags": "test"
        |      },
@@ -105,27 +109,24 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
        |      "warehouse": "demo",
-       |      "maxCatalogInstanceLifetime": "3600 second"
+       |      "maxCatalogInstanceLifetime": "3500 second"
        |    }
        |  },
        |  "throughput": {
        |    "shaperImpl": {
        |      "memoryBound": {
-       |        "meanStringTypeSizeEstimate": 500,
-       |        "meanObjectTypeSizeEstimate": 4096,
-       |        "burstEstimateDivisionFactor": 2,
-       |        "rateEstimateDivisionFactor": 2,
+       |        "fallbackStringTypeSizeEstimate": 50,
+       |        "objectTypeSizeEstimate": 4096,
        |        "chunkCostScale": 1,
        |        "chunkCostMax": 10,
        |        "tableRowCountWeight": 0.05,
-       |        "tableSizeWeight": 0.09,
+       |        "tableSizeWeight": 0.05,
        |        "tableSizeScaleFactor": 1
        |      }
        |    },
-       |    "advisedRatePeriod": "1 second",
-       |    "advisedChunksBurst": 1000,
-       |    "advisedChunkSize": 10,
-       |    "advisedRateChunks": 1000
+       |    "advisedRate": "1000 per 1 second",
+       |    "advisedBurst": 1000,
+       |    "advisedChunkSize": 10
        |  },
        |  "source": {
        |    "configuration": {
@@ -172,7 +173,7 @@ object IntegrationTests extends ZIOSpecDefault:
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         ) // col0 only have 100 unique values, thus we expect 100 rows total
-        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(
+        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(using
           BlobSourceWatermark.rw
         )
         latestVersion <- getLatestVersion
@@ -188,7 +189,7 @@ object IntegrationTests extends ZIOSpecDefault:
           "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
           Common.TargetDecoder
         )
-        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(
+        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(using
           BlobSourceWatermark.rw
         )
         latestVersion <- getLatestVersion

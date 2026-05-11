@@ -26,7 +26,7 @@ import com.sneaksanddata.arcane.framework.services.iceberg.{
   IcebergTablePropertyManager
 }
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
-import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DataDog, DeclaredMetrics}
+import com.sneaksanddata.arcane.framework.services.metrics.{DataDog, DeclaredMetrics, GlobalMetricTagProvider}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3StoragePath
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
 import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
@@ -53,6 +53,8 @@ import com.sneaksanddata.arcane.framework.services.streaming.processors.transfor
 import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
 import zio.*
 import zio.logging.backend.SLF4J
+import zio.metrics.connectors.datadog
+import zio.metrics.connectors.statsd.statsdUDS
 import zio.metrics.jvm.DefaultJvmMetrics
 
 object main extends ZIOAppDefault {
@@ -103,13 +105,13 @@ object main extends ZIOAppDefault {
     GenericBackfillStreamingMergeDataProvider.layer,
     GenericStreamingGraphBuilder.backfillSubStreamLayer,
     DeclaredMetrics.layer,
-    ArcaneDimensionsProvider.layer,
+    GlobalMetricTagProvider.layer,
     DataDog.UdsPublisher.layer,
     WatermarkProcessor.layer,
     BackfillOverwriteWatermarkProcessor.layer,
     DefaultStreamBootstrapper.layer,
     ThroughputShaperBuilder.layer,
-    DefaultJvmMetrics.liveV2.unit
+    (DefaultJvmMetrics.liveV2 >>> statsdUDS >>> datadog.live).unit
   )
 
   @main
