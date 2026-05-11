@@ -7,52 +7,26 @@ import com.sneaksanddata.arcane.framework.logging.ZIOLogAnnotations.zlog
 import com.sneaksanddata.arcane.framework.models.app.PluginStreamContext
 import com.sneaksanddata.arcane.framework.services.app.base.StreamRunnerService
 import com.sneaksanddata.arcane.framework.services.app.{GenericStreamRunnerService, PosixStreamLifetimeService}
-import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
-  BlobSourceDataProvider,
-  BlobSourceStreamingDataProvider
-}
+import com.sneaksanddata.arcane.framework.services.blobsource.providers.{BlobSourceDataProvider, BlobSourceStreamingDataProvider}
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
-import com.sneaksanddata.arcane.framework.services.blobsource.{
-  DefaultS3Reader,
-  UpsertBlobBackfillOverwriteBatchFactory,
-  UpsertBlobHookManager
-}
+import com.sneaksanddata.arcane.framework.services.blobsource.{DefaultS3Reader, UpsertBlobBackfillOverwriteBatchFactory, UpsertBlobHookManager}
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.{
-  IcebergEntityManager,
-  IcebergS3CatalogWriter,
-  IcebergSinkEntityManager,
-  IcebergTablePropertyManager
-}
+import com.sneaksanddata.arcane.framework.services.iceberg.{IcebergEntityManager, IcebergS3CatalogWriter, IcebergSinkEntityManager, IcebergTablePropertyManager}
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{DataDog, DeclaredMetrics, GlobalMetricTagProvider}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3StoragePath
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
-import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
-  GenericBackfillStreamingMergeDataProvider,
-  GenericBackfillStreamingOverwriteDataProvider
-}
-import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
-  GenericGraphBuilderFactory,
-  GenericStreamingGraphBuilder
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
-  BackfillApplyBatchProcessor,
-  BackfillOverwriteWatermarkProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
-  DisposeBatchProcessor,
-  MergeBatchProcessor,
-  WatermarkProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
-  FieldFilteringTransformer,
-  StagingProcessor
-}
+import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{GenericBackfillStreamingMergeDataProvider, GenericBackfillStreamingOverwriteDataProvider}
+import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{GenericGraphBuilderFactory, GenericStreamingGraphBuilder}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{BackfillApplyBatchProcessor, BackfillOverwriteWatermarkProcessor}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{DisposeBatchProcessor, MergeBatchProcessor, WatermarkProcessor}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{FieldFilteringTransformer, StagingProcessor}
 import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
 import zio.*
 import zio.logging.backend.SLF4J
+import zio.metrics.connectors.datadog
+import zio.metrics.connectors.statsd.statsdUDS
 import zio.metrics.jvm.DefaultJvmMetrics
 
 object main extends ZIOAppDefault {
@@ -109,7 +83,7 @@ object main extends ZIOAppDefault {
     BackfillOverwriteWatermarkProcessor.layer,
     DefaultStreamBootstrapper.layer,
     ThroughputShaperBuilder.layer,
-    DefaultJvmMetrics.liveV2.unit
+    (DefaultJvmMetrics.liveV2 >>> statsdUDS >>> datadog.live).unit
   )
 
   @main
