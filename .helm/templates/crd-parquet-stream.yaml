@@ -151,7 +151,7 @@ spec:
                           default: 3
                         queryRetryScaleFactor:
                           type: number
-                          default: 0.1
+                          default: 3.0
                         queryRetryOnMessageContents:
                           type: array
                           items:
@@ -159,7 +159,7 @@ spec:
                           default: []
                         queryRetryBaseDuration:
                           type: string
-                          default: 500 millisecond
+                          default: 1 second
                         queryRetryMode:
                           type: object
                           properties:
