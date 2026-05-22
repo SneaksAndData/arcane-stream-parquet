@@ -313,9 +313,8 @@ spec:
                   description: Configuration for throughput management controls
                   default:
                     advisedChunkSize: 10000
-                    advisedRateChunks: 1
-                    advisedRatePeriod: 15 second
-                    advisedChunksBurst: 1
+                    advisedRate: 100 per 1 second
+                    advisedBurst: 1
                     shaperImpl:
                       static: null
                       memoryBound: null
