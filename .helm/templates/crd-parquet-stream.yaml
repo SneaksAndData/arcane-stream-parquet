@@ -344,6 +344,7 @@ spec:
                       default: 1000
                     shaperImpl:
                       type: object
+                      nullable: true
                       description: Implementation of a throughput shaper
                       default:
                         static: null
