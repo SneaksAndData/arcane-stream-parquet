@@ -119,3 +119,6 @@ fabric.properties
 /.idea/vcs.xml
 /.idea/dataSources.xml
 /.idea/**/*.iml
+
+# mise local dev environment (may contain sensitive info, e.g. credentials)
+dev.env
