@@ -30,6 +30,6 @@ body:
   - type: input
     attributes:
       label: System information
-      placeholder: Arcane version, OS, dotnet version etc.
+      placeholder: Arcane version, OS, JVM version etc.
       validations:
         required: true
