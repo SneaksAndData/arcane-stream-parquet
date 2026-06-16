@@ -6,17 +6,29 @@ import com.sneaksanddata.arcane.framework.exceptions.StreamFailException
 import com.sneaksanddata.arcane.framework.logging.ZIOLogAnnotations.zlog
 import com.sneaksanddata.arcane.framework.models.app.PluginStreamContext
 import com.sneaksanddata.arcane.framework.services.app.base.StreamRunnerService
-import com.sneaksanddata.arcane.framework.services.app.{GenericStreamRunnerService, PosixStreamLifetimeService}
+import com.sneaksanddata.arcane.framework.services.app.{
+  GenericStreamRunnerService,
+  PosixStreamLifetimeService,
+  StreamGraphResolver
+}
+import com.sneaksanddata.arcane.framework.services.backfill.DefaultBackfillStateManager
+import com.sneaksanddata.arcane.framework.services.backfill.processors.{
+  BackfillCompletionProcessor,
+  ShardStagingProcessor
+}
 import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
   BlobSourceDataProvider,
   BlobSourceStreamingDataProvider
 }
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
-import com.sneaksanddata.arcane.framework.services.blobsource.{
-  DefaultS3Reader,
-  UpsertBlobBackfillOverwriteBatchFactory,
-  UpsertBlobHookManager
+import com.sneaksanddata.arcane.framework.services.blobsource.DefaultS3Reader
+import com.sneaksanddata.arcane.framework.services.blobsource.backfill.{
+  BlobBackfillSourceDataProvider,
+  BlobShardedBackfillStreamDataProvider,
+  BlobSourceBackfillMergeStreamDataProvider,
+  BlobSourceShardFactory
 }
+import com.sneaksanddata.arcane.framework.services.blobsource.versioning.UpsertBlobStagedBatchFactory
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
 import com.sneaksanddata.arcane.framework.services.iceberg.{
@@ -26,24 +38,16 @@ import com.sneaksanddata.arcane.framework.services.iceberg.{
   IcebergTablePropertyManager
 }
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
+import com.sneaksanddata.arcane.framework.services.merging.cleanup.CatalogDisposeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{DataDog, DeclaredMetrics, GlobalMetricTagProvider}
+import com.sneaksanddata.arcane.framework.services.naming.DefaultNameGenerator
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3StoragePath
 import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
-import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
-  GenericBackfillStreamingMergeDataProvider,
-  GenericBackfillStreamingOverwriteDataProvider
-}
-import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
-  GenericGraphBuilderFactory,
-  GenericStreamingGraphBuilder
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
-  BackfillApplyBatchProcessor,
-  BackfillOverwriteWatermarkProcessor
-}
+import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.maintenance.TargetMaintenanceProcessor
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
   DisposeBatchProcessor,
   MergeBatchProcessor,
+  SchemaMigrationProcessor,
   WatermarkProcessor
 }
 import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
@@ -80,7 +84,7 @@ object main extends ZIOAppDefault {
 
   private lazy val streamRunner = appLayer.provide(
     GenericStreamRunnerService.layer,
-    GenericGraphBuilderFactory.composedLayer,
+    StreamGraphResolver.composedLayer,
     DisposeBatchProcessor.layer,
     FieldFilteringTransformer.layer,
     MergeBatchProcessor.layer,
@@ -88,10 +92,31 @@ object main extends ZIOAppDefault {
     FieldsFilteringService.layer,
     PosixStreamLifetimeService.layer,
     BlobSourceStreamingDataProvider.layer,
-    UpsertBlobBackfillOverwriteBatchFactory.layer,
+
+    // storage implementation
     s3ReaderLayer,
+
+    // streaming
     blobSourceLayer,
+    UpsertBlobStagedBatchFactory.layer,
     BlobSourceDataProvider.layer,
+
+    // backfill
+    BlobBackfillSourceDataProvider.layer,
+    BlobSourceShardFactory.layer,
+    BlobShardedBackfillStreamDataProvider.layer,
+    BlobSourceBackfillMergeStreamDataProvider.layer,
+    DefaultBackfillStateManager.layer,
+    ShardStagingProcessor.layer,
+    BackfillCompletionProcessor.layer,
+
+    // schema
+    SchemaMigrationProcessor.layer,
+
+    // maintenance and cleanup
+    TargetMaintenanceProcessor.layer,
+    CatalogDisposeServiceClient.layer,
+    DefaultNameGenerator.layer,
     ParquetPluginStreamContext.layer,
     IcebergS3CatalogWriter.layer,
     IcebergEntityManager.sinkLayer,
@@ -99,19 +124,12 @@ object main extends ZIOAppDefault {
     IcebergTablePropertyManager.stagingLayer,
     IcebergTablePropertyManager.sinkLayer,
     JdbcMergeServiceClient.layer,
-    UpsertBlobHookManager.layer,
-    BackfillApplyBatchProcessor.layer,
-    GenericBackfillStreamingOverwriteDataProvider.layer,
-    GenericBackfillStreamingMergeDataProvider.layer,
-    GenericStreamingGraphBuilder.backfillSubStreamLayer,
     DeclaredMetrics.layer,
     GlobalMetricTagProvider.layer,
     DataDog.UdsPublisher.layer,
     WatermarkProcessor.layer,
-    BackfillOverwriteWatermarkProcessor.layer,
     DefaultStreamBootstrapper.layer,
-    ThroughputShaperBuilder.layer,
-    (DefaultJvmMetrics.liveV2 >>> statsdUDS >>> datadog.live).unit
+    ThroughputShaperBuilder.layer
   )
 
   @main
