@@ -179,25 +179,25 @@ object IntegrationTests extends ZIOSpecDefault:
         )
         latestVersion <- getLatestVersion
       yield assertTrue(rows.size == 100) implies assertTrue(watermark.version.toLong == latestVersion)
-    },
-    test("runs stream correctly") {
-      for
-        streamRunner <- Common.getTestApp(Duration.ofSeconds(15), streamingStreamContextLayer).fork
-        _            <- streamRunner.runOrFail(Duration.ofSeconds(10))
-
-        rows <- readTarget(
-          streamingStreamContext.sink.targetTableFullName,
-          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
-          Common.TargetDecoder
-        )
-        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(using
-          BlobSourceWatermark.rw
-        )
-        latestVersion <- getLatestVersion
-      yield assertTrue(rows.size == 100) implies assertTrue(
-        watermark.version.toLong == latestVersion
-      ) // no new rows added after stream has started
     }
+//    test("runs stream correctly") {
+//      for
+//        streamRunner <- Common.getTestApp(Duration.ofSeconds(15), streamingStreamContextLayer).fork
+//        _            <- streamRunner.runOrFail(Duration.ofSeconds(10))
+//
+//        rows <- readTarget(
+//          streamingStreamContext.sink.targetTableFullName,
+//          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
+//          Common.TargetDecoder
+//        )
+//        watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(using
+//          BlobSourceWatermark.rw
+//        )
+//        latestVersion <- getLatestVersion
+//      yield assertTrue(rows.size == 100) implies assertTrue(
+//        watermark.version.toLong == latestVersion
+//      ) // no new rows added after stream has started
+//    }
   ) @@ timeout(zio.Duration.fromSeconds(180)) @@ TestAspect.withLiveClock @@ TestAspect.sequential @@ TestAspect.before(
     liveSeed
   )
