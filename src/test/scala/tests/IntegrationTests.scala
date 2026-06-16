@@ -16,6 +16,7 @@ import zio.test.TestAspect.timeout
 import zio.{Scope, ZIO, ZLayer}
 
 import java.time.Duration
+import scala.util.Random
 
 object IntegrationTests extends ZIOSpecDefault:
   val targetTableName = "iceberg.test.stream_run"
@@ -38,7 +39,6 @@ object IntegrationTests extends ZIOSpecDefault:
        |  },
        |  "staging": {
        |    "table": {
-       |      "stagingTablePrefix": "staging_parquet_test",
        |      "maxRowsPerFile": 10000,
        |      "stagingCatalogName": "iceberg",
        |      "stagingSchemaName": "test",
@@ -165,6 +165,7 @@ object IntegrationTests extends ZIOSpecDefault:
     test("runs backfill") {
       for
         _              <- TestSystem.putEnv("STREAMCONTEXT__BACKFILL", "true")
+        _              <- TestSystem.putEnv("STREAMCONTEXT__BACKFILL_ID", Random.alphanumeric.take(10).mkString(""))
         _              <- ZIO.attempt(clearTarget(targetTableName))
         backfillRunner <- Common.getTestApp(Duration.ofSeconds(65), streamingStreamContextLayer).fork
         _              <- backfillRunner.runOrFail(Duration.ofSeconds(60))
