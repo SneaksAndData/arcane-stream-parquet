@@ -16,18 +16,18 @@ import com.sneaksanddata.arcane.framework.services.backfill.processors.{
   BackfillCompletionProcessor,
   ShardStagingProcessor
 }
-import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
-  BlobSourceDataProvider,
-  BlobSourceStreamingDataProvider
-}
-import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
-import com.sneaksanddata.arcane.framework.services.blobsource.DefaultS3Reader
+import com.sneaksanddata.arcane.framework.services.blobsource.DefaultS3Service
 import com.sneaksanddata.arcane.framework.services.blobsource.backfill.{
   BlobBackfillSourceDataProvider,
   BlobShardedBackfillStreamDataProvider,
   BlobSourceBackfillMergeStreamDataProvider,
   BlobSourceShardFactory
 }
+import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
+  BlobSourceDataProvider,
+  BlobSourceStreamingDataProvider
+}
+import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
 import com.sneaksanddata.arcane.framework.services.blobsource.versioning.UpsertBlobStagedBatchFactory
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
@@ -40,9 +40,9 @@ import com.sneaksanddata.arcane.framework.services.iceberg.{
 import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
 import com.sneaksanddata.arcane.framework.services.merging.cleanup.CatalogDisposeServiceClient
 import com.sneaksanddata.arcane.framework.services.metrics.{DataDog, DeclaredMetrics, GlobalMetricTagProvider}
-import com.sneaksanddata.arcane.framework.services.naming.DefaultNameGenerator
+import com.sneaksanddata.arcane.framework.services.naming.{DefaultNameGenerator, NameGenerator}
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.S3StoragePath
-import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
+import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageService
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.maintenance.TargetMaintenanceProcessor
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
   DisposeBatchProcessor,
@@ -57,9 +57,6 @@ import com.sneaksanddata.arcane.framework.services.streaming.processors.transfor
 import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
 import zio.*
 import zio.logging.backend.SLF4J
-import zio.metrics.connectors.datadog
-import zio.metrics.connectors.statsd.statsdUDS
-import zio.metrics.jvm.DefaultJvmMetrics
 
 object main extends ZIOAppDefault {
 
@@ -72,12 +69,14 @@ object main extends ZIOAppDefault {
   yield ()
 
   val blobSourceLayer
-      : ZLayer[S3BlobStorageReader & PluginStreamContext, Throwable, BlobListingParquetStreamingSource[S3StoragePath]] =
-    BlobListingParquetStreamingSource.getLayer(context =>
+      : ZLayer[S3BlobStorageService & NameGenerator & PluginStreamContext, Throwable, BlobListingParquetStreamingSource[
+        S3StoragePath
+      ]] =
+    BlobListingParquetStreamingSource.getS3Layer(context =>
       context.asInstanceOf[ParquetPluginStreamContext].source.configuration
     )
-  val s3ReaderLayer: ZLayer[PluginStreamContext, Nothing, S3BlobStorageReader] =
-    DefaultS3Reader.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration)
+  val s3ReaderLayer: ZLayer[PluginStreamContext, Nothing, S3BlobStorageService] =
+    DefaultS3Service.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration)
 
   private def getExitCode(exception: Throwable): zio.ExitCode =
     exception match
