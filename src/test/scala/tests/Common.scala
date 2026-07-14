@@ -20,7 +20,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
   BlobSourceDataProvider,
   BlobSourceStreamingDataProvider
 }
-import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
+import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
 import com.sneaksanddata.arcane.framework.services.blobsource.versioning.UpsertBlobStagedBatchFactory
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService

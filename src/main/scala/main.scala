@@ -20,7 +20,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
   BlobSourceDataProvider,
   BlobSourceStreamingDataProvider
 }
-import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
+import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
 import com.sneaksanddata.arcane.framework.services.blobsource.DefaultS3Reader
 import com.sneaksanddata.arcane.framework.services.blobsource.backfill.{
   BlobBackfillSourceDataProvider,
@@ -72,8 +72,10 @@ object main extends ZIOAppDefault {
   yield ()
 
   val blobSourceLayer
-      : ZLayer[S3BlobStorageReader & PluginStreamContext, Throwable, BlobListingParquetSource[S3StoragePath]] =
-    BlobListingParquetSource.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration)
+      : ZLayer[S3BlobStorageReader & PluginStreamContext, Throwable, BlobListingParquetStreamingSource[S3StoragePath]] =
+    BlobListingParquetStreamingSource.getLayer(context =>
+      context.asInstanceOf[ParquetPluginStreamContext].source.configuration
+    )
   val s3ReaderLayer: ZLayer[PluginStreamContext, Nothing, S3BlobStorageReader] =
     DefaultS3Reader.getLayer(context => context.asInstanceOf[ParquetPluginStreamContext].source.configuration)
 
