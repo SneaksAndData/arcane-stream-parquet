@@ -23,6 +23,7 @@ jobs:
       contents: read       # required for dependabot PRs
       checks: write        # required for cobertura-action
       packages: read       # required for building the SBT project
+      code-quality: write
 
     steps:
       - uses: actions/checkout@v6
