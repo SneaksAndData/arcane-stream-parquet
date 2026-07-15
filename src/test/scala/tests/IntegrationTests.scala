@@ -131,6 +131,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |  "source": {
        |    "configuration": {
        |      "sourcePath": "s3a://s3-blob-reader",
+       |      "shardStoragePath": "s3a://tmp",
        |      "tempStoragePath": "/tmp",
        |      "primaryKeys": ["col0"],
        |      "useNameMapping": false,

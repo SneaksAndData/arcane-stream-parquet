@@ -585,6 +585,10 @@ spec:
                         sourcePath:
                           type: string
                           description: Location root for Parquet files in a form of HDFS address s3a://, abfss:// etc.
+                        shardStoragePath:
+                          type: string
+                          description: Location root for storing shard data when running backfill OVERWRITE
+                          default: s3a://tmp
                         primaryKeys:
                           type: array
                           items:

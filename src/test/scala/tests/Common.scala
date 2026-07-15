@@ -20,7 +20,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
   BlobSourceDataProvider,
   BlobSourceStreamingDataProvider
 }
-import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
+import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
 import com.sneaksanddata.arcane.framework.services.blobsource.versioning.UpsertBlobStagedBatchFactory
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
@@ -34,7 +34,7 @@ import com.sneaksanddata.arcane.framework.services.merging.cleanup.CatalogDispos
 import com.sneaksanddata.arcane.framework.services.metrics.{DeclaredMetrics, GlobalMetricTagProvider}
 import com.sneaksanddata.arcane.framework.services.naming.DefaultNameGenerator
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
-import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
+import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageService
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.maintenance.TargetMaintenanceProcessor
 import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
   DisposeBatchProcessor,
@@ -136,7 +136,7 @@ object Common:
   def getLatestVersion: ZIO[Any, Throwable, Long] =
     for
       reader <- ZIO.succeed(
-        S3BlobStorageReader(
+        S3BlobStorageService(
           StaticCredentialsProvider.create(AwsBasicCredentials.create("minioadmin", "minioadmin")),
           Some(
             S3ClientSettings(
