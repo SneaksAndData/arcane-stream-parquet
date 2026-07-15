@@ -589,10 +589,6 @@ spec:
                           type: string
                           description: Location root for storing shard data when running backfill OVERWRITE
                           default: s3a://tmp
-                        shardSize:
-                          type: integer
-                          description: Number of files to pack per shard when running backfill OVERWRITE
-                          default: 1000
                         primaryKeys:
                           type: array
                           items:
