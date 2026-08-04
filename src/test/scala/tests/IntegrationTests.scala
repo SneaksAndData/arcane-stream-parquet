@@ -24,16 +24,6 @@ object IntegrationTests extends ZIOSpecDefault:
   private val streamContextStr =
     s"""
        |{
-       |  "backfillJobTemplateRef": {
-       |    "apiGroup": "streaming.sneaksanddata.com",
-       |    "kind": "StreamingJobTemplate",
-       |    "name": "arcane-stream-parquet-large-job"
-       |  },
-       |  "jobTemplateRef": {
-       |    "apiGroup": "streaming.sneaksanddata.com",
-       |    "kind": "StreamingJobTemplate",
-       |    "name": "arcane-stream-parquet-standard-job"
-       |  },
        |  "observability": {
        |    "metricTags": {}
        |  },

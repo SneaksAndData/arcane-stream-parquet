@@ -23,6 +23,7 @@ import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
 import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
 import com.sneaksanddata.arcane.framework.services.blobsource.versioning.UpsertBlobStagedBatchFactory
 import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
+import com.sneaksanddata.arcane.framework.services.completion.DefaultStreamFinalizer
 import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
 import com.sneaksanddata.arcane.framework.services.iceberg.{
   IcebergEntityManager,
@@ -113,7 +114,8 @@ object Common:
       // maintenance and cleanup
       TargetMaintenanceProcessor.layer,
       CatalogDisposeServiceClient.layer,
-      DefaultNameGenerator.layer
+      DefaultNameGenerator.layer,
+      DefaultStreamFinalizer.layer
     )
 
   val TargetDecoder: ResultSet => (Long, String, Long, String, Long, String, Long, String, Long, String, String, Long) =
