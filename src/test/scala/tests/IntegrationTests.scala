@@ -114,7 +114,8 @@ object IntegrationTests extends ZIOSpecDefault:
        |        "chunkCostMax": 10,
        |        "tableRowCountWeight": 0.05,
        |        "tableSizeWeight": 0.05,
-       |        "tableSizeScaleFactor": 1
+       |        "tableSizeScaleFactor": 1,
+       |        "chunkSizeCap": 1000000
        |      }
        |    },
        |    "advisedRate": "1000 per 1 second",
