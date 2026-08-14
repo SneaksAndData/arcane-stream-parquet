@@ -11,6 +11,9 @@ import com.sneaksanddata.arcane.framework.testkit.verifications.FrameworkVerific
   readTarget
 }
 import com.sneaksanddata.arcane.framework.testkit.zioutils.ZKit.{liveSeed, runOrFail}
+import zio.metrics.connectors.MetricsConfig
+import zio.metrics.connectors.datadog.DatadogPublisherConfig
+import zio.metrics.connectors.statsd.DatagramSocketConfig
 import zio.test.*
 import zio.test.TestAspect.timeout
 import zio.{Scope, ZIO, ZLayer}
@@ -149,8 +152,10 @@ object IntegrationTests extends ZIOSpecDefault:
        |  }
        |}""".stripMargin
 
-  private val streamingStreamContext      = ParquetPluginStreamContext(streamContextStr)
-  private val streamingStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](streamingStreamContext)
+  private val streamingStreamContext = ParquetPluginStreamContext(streamContextStr)
+  private val streamingStreamContextLayer = ZLayer.succeed[ParquetPluginStreamContext](streamingStreamContext) ++ ZLayer
+    .succeed[DatagramSocketConfig](streamingStreamContext) ++ ZLayer
+    .succeed[MetricsConfig](streamingStreamContext) ++ ZLayer.succeed(DatadogPublisherConfig())
 
   override def spec: Spec[TestEnvironment & Scope, Any] = suite("IntegrationTests")(
     test("runs backfill") {
