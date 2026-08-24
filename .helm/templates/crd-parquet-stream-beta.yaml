@@ -218,7 +218,7 @@ spec:
                           default: 0
                         changeCaptureRangeLimit:
                           type: number
-                          default: 10
+                          default: 100
                 sink:
                   type: object
                   description: Configuration for the Iceberg Sink
