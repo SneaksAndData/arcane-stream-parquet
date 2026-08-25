@@ -1,20 +1,9 @@
 {
-  "backfillJobTemplateRef": {
-    "apiGroup": "streaming.sneaksanddata.com",
-    "kind": "StreamingJobTemplate",
-    "name": "arcane-stream-parquet-large-job"
-  },
-  "jobTemplateRef": {
-    "apiGroup": "streaming.sneaksanddata.com",
-    "kind": "StreamingJobTemplate",
-    "name": "arcane-stream-parquet-standard-job"
-  },
   "observability": {
     "metricTags": {}
   },
   "staging": {
     "table": {
-      "stagingTablePrefix": "staging_parquet_test",
       "maxRowsPerFile": 10000,
       "stagingCatalogName": "iceberg",
       "stagingSchemaName": "test",
@@ -36,11 +25,16 @@
     "changeCapture": {
       "changeCaptureInterval": "5 second",
       "changeCaptureJitterVariance": 0.1,
-      "changeCaptureJitterSeed": 0
+      "changeCaptureJitterSeed": 0,
+      "changeCaptureRangeLimit": 10
     }
   },
   "sink": {
     "mergeServiceClient": {
+      "connectionUrl": "jdbc:trino://localhost:8080",
+      "credentialType": {
+        "basic": {}
+      },
       "extraConnectionParameters": {
         "clientTags": "test"
       },
@@ -87,25 +81,25 @@
   "throughput": {
     "shaperImpl": {
       "memoryBound": {
-        "meanStringTypeSizeEstimate": 500,
-        "meanObjectTypeSizeEstimate": 4096,
-        "burstEstimateDivisionFactor": 2,
-        "rateEstimateDivisionFactor": 2,
+        "fallbackStringTypeSizeEstimate": 50,
+        "objectTypeSizeEstimate": 4096,
         "chunkCostScale": 1,
         "chunkCostMax": 10,
-        "tableRowCountWeight": 0.5,
-        "tableSizeWeight": 0.9,
-        "tableSizeScaleFactor": 1
+        "tableRowCountWeight": 0.05,
+        "tableSizeWeight": 0.05,
+        "tableSizeScaleFactor": 1,
+        "chunkSizeCap": 1000000,
+        "maxStatisticsAge": 604800
       }
     },
-    "advisedRatePeriod": "1 second",
-    "advisedChunksBurst": 1,
-    "advisedChunkSize": 1,
-    "advisedRateChunks": 1
+    "advisedRate": "1000 per 1 second",
+    "advisedBurst": 1000,
+    "advisedChunkSize": 10
   },
   "source": {
     "configuration": {
       "sourcePath": "s3a://s3-blob-reader",
+      "shardStoragePath": "s3a://tmp",
       "tempStoragePath": "/tmp",
       "primaryKeys": ["col0"],
       "useNameMapping": false,
