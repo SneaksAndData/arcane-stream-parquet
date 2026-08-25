@@ -24,4 +24,6 @@ rules:
     resources:
       - parquet-streams
       - parquet-streams/status
+      - parquet-beta-streams
+      - parquet-beta-streams/status
 {{- end }}

@@ -10,18 +10,6 @@ metadata:
   name: parquet-sample-stream
   namespace: arcane
 spec:
-  # The reference to the job template used in the backfill mode.
-  backfillJobTemplateRef:
-    apiGroup: streaming.sneaksanddata.com
-    kind: StreamingJobTemplate
-    name: backfill-job-template
-
-  # The reference to the job template used in the streaming mode
-  jobTemplateRef:
-    apiGroup: streaming.sneaksanddata.com
-    kind: StreamingJobTemplate
-    name: job-template
-
   # The reference to the secret containing storage connection and merge service credentials,
   # which must be in the same namespace as the stream definition.
   connectionStringRef:
