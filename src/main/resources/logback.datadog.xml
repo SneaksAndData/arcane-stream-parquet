@@ -3,6 +3,19 @@
         <destination>tcp-intake.logs.datadoghq.eu:443</destination>
         <keepAliveDuration>20 seconds</keepAliveDuration>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- 1. Disable the default message field -->
+            <fieldNames>
+                <message>[ignore]</message>
+            </fieldNames>
+
+            <!-- 2. Re-add message field with truncation to 100.000 -->
+            <provider class="net.logstash.logback.composite.loggingevent.LoggingEventPatternJsonProvider">
+                <pattern>
+                    {
+                      "message": "%.-100000message"
+                    }
+                </pattern>
+            </provider>
             <customFields>
                 {
                 "service":"arcane-stream-runner",

@@ -4,53 +4,18 @@ package tests
 import main.{appLayer, blobSourceLayer, s3ReaderLayer}
 import models.app.ParquetPluginStreamContext
 
-import com.sneaksanddata.arcane.framework.services.app.GenericStreamRunnerService
-import com.sneaksanddata.arcane.framework.services.blobsource.providers.{
-  BlobSourceDataProvider,
-  BlobSourceStreamingDataProvider
-}
-import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetSource
-import com.sneaksanddata.arcane.framework.services.blobsource.{
-  UpsertBlobBackfillOverwriteBatchFactory,
-  UpsertBlobHookManager
-}
-import com.sneaksanddata.arcane.framework.services.bootstrap.DefaultStreamBootstrapper
-import com.sneaksanddata.arcane.framework.services.filters.FieldsFilteringService
-import com.sneaksanddata.arcane.framework.services.iceberg.{
-  IcebergEntityManager,
-  IcebergS3CatalogWriter,
-  IcebergTablePropertyManager
-}
-import com.sneaksanddata.arcane.framework.services.merging.JdbcMergeServiceClient
-import com.sneaksanddata.arcane.framework.services.metrics.{ArcaneDimensionsProvider, DeclaredMetrics}
+import com.sneaksanddata.arcane.framework.plugins.LayerAssemblies
+import com.sneaksanddata.arcane.framework.plugins.parquets3.Services
+import com.sneaksanddata.arcane.framework.services.app.{GenericStreamRunnerService, StreamGraphResolver}
+import com.sneaksanddata.arcane.framework.services.blobsource.readers.listing.BlobListingParquetStreamingSource
 import com.sneaksanddata.arcane.framework.services.storage.models.s3.{S3ClientSettings, S3StoragePath}
-import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageReader
-import com.sneaksanddata.arcane.framework.services.streaming.data_providers.backfill.{
-  GenericBackfillStreamingMergeDataProvider,
-  GenericBackfillStreamingOverwriteDataProvider
-}
-import com.sneaksanddata.arcane.framework.services.streaming.graph_builders.{
-  GenericGraphBuilderFactory,
-  GenericStreamingGraphBuilder
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.backfill.{
-  BackfillApplyBatchProcessor,
-  BackfillOverwriteWatermarkProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.batch_processors.streaming.{
-  DisposeBatchProcessor,
-  MergeBatchProcessor,
-  WatermarkProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.processors.transformers.{
-  FieldFilteringTransformer,
-  StagingProcessor
-}
-import com.sneaksanddata.arcane.framework.services.streaming.throughput.base.ThroughputShaperBuilder
+import com.sneaksanddata.arcane.framework.services.storage.services.s3.S3BlobStorageService
 import com.sneaksanddata.arcane.framework.testkit.appbuilder.TestAppBuilder.buildTestApp
-import com.sneaksanddata.arcane.framework.testkit.streaming.TimeLimitLifetimeService
 import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
-import zio.{ULayer, ZIO, ZLayer}
+import zio.metrics.connectors.MetricsConfig
+import zio.metrics.connectors.datadog.DatadogPublisherConfig
+import zio.metrics.connectors.statsd.DatagramSocketConfig
+import zio.{ZIO, ZLayer}
 
 import java.sql.ResultSet
 import java.time.Duration
@@ -67,42 +32,23 @@ object Common:
     */
   def getTestApp(
       runDuration: Duration,
-      streamContextLayer: ZLayer[Any, Nothing, ParquetPluginStreamContext]
+      streamContextLayer: ZLayer[
+        Any,
+        Nothing,
+        ParquetPluginStreamContext & DatagramSocketConfig & MetricsConfig & DatadogPublisherConfig
+      ]
   ): ZIO[Any, Throwable, Unit] =
     buildTestApp(
       appLayer,
       streamContextLayer,
-      s3ReaderLayer,
-      BlobSourceStreamingDataProvider.layer,
-      UpsertBlobHookManager.layer,
-      UpsertBlobBackfillOverwriteBatchFactory.layer
+      s3ReaderLayer
     )(
-      GenericStreamRunnerService.layer,
-      GenericGraphBuilderFactory.composedLayer,
-      DisposeBatchProcessor.layer,
-      FieldFilteringTransformer.layer,
-      MergeBatchProcessor.layer,
-      StagingProcessor.layer,
-      FieldsFilteringService.layer,
-      IcebergS3CatalogWriter.layer,
-      JdbcMergeServiceClient.layer,
-      BackfillApplyBatchProcessor.layer,
-      GenericBackfillStreamingOverwriteDataProvider.layer,
-      GenericBackfillStreamingMergeDataProvider.layer,
-      GenericStreamingGraphBuilder.backfillSubStreamLayer,
-      DeclaredMetrics.layer,
-      ArcaneDimensionsProvider.layer,
-      WatermarkProcessor.layer,
-      BackfillOverwriteWatermarkProcessor.layer,
-      ZLayer.succeed(TimeLimitLifetimeService(runDuration)),
-      BlobSourceDataProvider.layer,
       blobSourceLayer,
-      DefaultStreamBootstrapper.layer,
-      ThroughputShaperBuilder.layer,
-      IcebergEntityManager.sinkLayer,
-      IcebergEntityManager.stagingLayer,
-      IcebergTablePropertyManager.stagingLayer,
-      IcebergTablePropertyManager.sinkLayer
+      Services.sourceLayer,
+      LayerAssemblies.frameworkPipelineServicesLayer,
+      LayerAssemblies.frameworkStagingServicesLayer,
+      GenericStreamRunnerService.layer,
+      StreamGraphResolver.composedLayer
     )
 
   val TargetDecoder: ResultSet => (Long, String, Long, String, Long, String, Long, String, Long, String, String, Long) =
@@ -125,7 +71,7 @@ object Common:
   def getLatestVersion: ZIO[Any, Throwable, Long] =
     for
       reader <- ZIO.succeed(
-        S3BlobStorageReader(
+        S3BlobStorageService(
           StaticCredentialsProvider.create(AwsBasicCredentials.create("minioadmin", "minioadmin")),
           Some(
             S3ClientSettings(
