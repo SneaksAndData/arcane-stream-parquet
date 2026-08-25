@@ -474,7 +474,7 @@ spec:
                               default: 1000000
                             maxStatisticsAge:
                               type: integer
-                              description: Interval between statistics update in seconds
+                              description: Interval between statistics cache updates in seconds
                               default: 604800
                 source:
                   type: object
