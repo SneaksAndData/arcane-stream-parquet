@@ -122,3 +122,6 @@ fabric.properties
 
 # mise local dev environment (may contain sensitive info, e.g. credentials)
 dev.env
+
+# Local GitHub token file
+.ghtoken

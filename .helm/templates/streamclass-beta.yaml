@@ -17,3 +17,11 @@ spec:
   pluralName: parquet-beta-streams
   secretRefs:
     - streamConfigurationSecretRef
+  overridableFields:
+    # This allows use the different MergeService for running large backfills
+    - .spec.sink.mergeServiceClient.connectionUrl
+    - .spec.sink.mergeServiceClient.extraConnectionParameters
+
+    # This allows override backfill behavior and the start date
+    - .spec.streamMode.backfill.backfillBehavior
+    - .spec.streamMode.backfill.backfillStartDate
