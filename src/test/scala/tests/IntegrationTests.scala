@@ -41,8 +41,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "catalogProperties": {},
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
-       |      "warehouse": "demo",
-       |      "maxCatalogInstanceLifetime": "3600 second"
+       |      "warehouse": "demo"
        |    }
        |  },
        |  "streamMode": {
@@ -102,8 +101,7 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "catalogProperties": {},
        |      "catalogUri": "http://localhost:20001/catalog",
        |      "namespace": "test",
-       |      "warehouse": "demo",
-       |      "maxCatalogInstanceLifetime": "3500 second"
+       |      "warehouse": "demo"
        |    }
        |  },
        |  "throughput": {
@@ -145,12 +143,8 @@ object IntegrationTests extends ZIOSpecDefault:
        |      "enabled": false,
        |      "strategy": {}
        |    },
-       |    "fieldSelectionRule": {
-       |      "essentialFields": [],
-       |      "rule":{
-       |        "all": {}
-       |      },
-       |      "isServerSide": true
+       |    "modifications": {
+       |      "supported": {}
        |    }
        |  }
        |}""".stripMargin
@@ -170,7 +164,7 @@ object IntegrationTests extends ZIOSpecDefault:
         _              <- backfillRunner.runOrFail(Duration.ofSeconds(60))
         rows <- readTarget(
           streamingStreamContext.sink.targetTableFullName,
-          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
+          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, arcane_version",
           Common.TargetDecoder
         ) // col0 only have 100 unique values, thus we expect 100 rows total
         watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(using
@@ -186,7 +180,7 @@ object IntegrationTests extends ZIOSpecDefault:
 
         rows <- readTarget(
           streamingStreamContext.sink.targetTableFullName,
-          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, createdon",
+          "col0, col1, col2, col3, col4, col5, col6, col7, col8, col9, arcane_merge_key, arcane_version",
           Common.TargetDecoder
         )
         watermark <- getWatermark(streamingStreamContext.sink.targetTableFullName.split('.').last)(using
